@@ -2,7 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/sevensegmentocr/seven-segment-ocr" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/ssocr/SSOCR" vcs="Git" />
   </component>
 </project>
