@@ -19,7 +19,7 @@ DIGITS_LOOKUP = {
     (0, 0, 0, 0, 0, 1, 1): '-'
 }
 H_W_Ratio = 1.9
-THRESHOLD = 35
+THRESHOLD = 80
 arc_tan_theta = 6.0  # 数码管倾斜角度
 crop_y0 = 215
 crop_y1 = 470
@@ -38,6 +38,7 @@ def load_image(image, show=False):
     if show:
         cv2.imshow('gray_img', gray_img)
         cv2.imshow('blurred_img', blurred)
+        cv2.waitKey(0)
     return blurred, gray_img
 
 
@@ -55,6 +56,7 @@ def preprocess(img, threshold, show=False, kernel_size=(5, 5)):
     if show:
         cv2.imshow('equlizeHist', img)
         cv2.imshow('threshold', dst)
+        cv2.waitKey(0)
     return dst
 
 
@@ -99,9 +101,9 @@ def find_digits_positions(img, reserved_threshold=20):
 
     digits_positions = []
     img_array = np.sum(img, axis=0)
-    horizon_position = helper_extract(img_array, threshold=reserved_threshold)
+    horizon_position = helper_extract(img_array, threshold=7)
     img_array = np.sum(img, axis=1)
-    vertical_position = helper_extract(img_array, threshold=reserved_threshold * 4)
+    vertical_position = helper_extract(img_array, threshold=20)
     # make vertical_position has only one element
     if len(vertical_position) > 1:
         vertical_position = [(vertical_position[0][0], vertical_position[len(vertical_position) - 1][1])]
@@ -257,9 +259,6 @@ def recognize_digits_line_method(digits_positions, output_img, input_img):
         cv2.putText(output_img, str(digit), (x0 + 3, y0 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 128, 0), 2)
     return digits
 
-# Ustaw ścieżkę do Tesseract
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-
 
 # Funkcja do ekstrakcji tekstu z określonego regionu
 def extract_text_from_frame(frame, roi):
@@ -268,18 +267,18 @@ def extract_text_from_frame(frame, roi):
 
     blurred, gray_img = load_image(roi_frame, show=False)
     output = blurred
-    dst = preprocess(blurred, THRESHOLD, show=False)
+    dst = preprocess(blurred, THRESHOLD, show=True)
+
+    cv2.imwrite("test.png", dst)
+
     digits_positions = find_digits_positions(dst)
+
     if digits_positions is None: return
     digits = recognize_digits_line_method(digits_positions, output, dst)
-    if False:
-        cv2.imshow('output', output)
-        cv2.waitKey()
-        cv2.destroyAllWindows()
-    cv2.imshow("XD",blurred)
-    cv2.waitKey(0)
+
     print(digits)
 
+    return digits
 
 # Wczytaj wideo
 video_path = '2024-09-20 15-21-39.mkv'
@@ -303,7 +302,7 @@ with open('output.txt', 'w') as file:
         if not ret:
             break
 
-        if frame_count % frame_interval == 0:
+        if frame_count % frame_interval == 0 and frame_count >= 120:
             time_stamp = timedelta(seconds=int(frame_count // fps))
 
             # cv2.imshow("Frame",frame)
