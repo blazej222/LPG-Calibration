@@ -21,10 +21,17 @@ DIGITS_LOOKUP = {
 H_W_Ratio = 1.9
 THRESHOLD = 80
 arc_tan_theta = 6.0  # 数码管倾斜角度
-crop_y0 = 215
-crop_y1 = 470
-crop_x0 = 260
-crop_x1 = 890
+# crop_y0 = 215
+# crop_y1 = 470
+# crop_x0 = 260
+# crop_x1 = 890
+
+detect_digit_primary_dimension = 8 # how many pixels must be in column to detect horizontal pixel
+detect_digit_secondary_dimension = 8 # how many consecutive detected pixels must be next to another to start
+# detecting digit TODO: Might not be necessary
+
+
+
 def load_image(image, show=False):
     # todo: crop image and clear dc and ac signal
     gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -64,13 +71,14 @@ def helper_extract(one_d_array, threshold=20):
     res = []
     flag = 0
     temp = 0
+    # Let's assume we're checking horizontally (summing by column)
     for i in range(len(one_d_array)):
-        if one_d_array[i] < 12 * 255:
-            if flag > threshold:
+        if one_d_array[i] < detect_digit_primary_dimension * 255: # if there's not enough pixels in this column
+            if flag > threshold: # check if there have been enough pixels in a row
                 start = i - flag
                 end = i
                 temp = end
-                if end - start > 20:
+                if end - start > detect_digit_secondary_dimension: #TODO: Is this even necessary?
                     res.append((start, end))
             flag = 0
         else:
@@ -267,16 +275,22 @@ def extract_text_from_frame(frame, roi):
 
     blurred, gray_img = load_image(roi_frame, show=False)
     output = blurred
-    dst = preprocess(blurred, THRESHOLD, show=True)
+    dst = preprocess(blurred, THRESHOLD, show=False)
 
     cv2.imwrite("test.png", dst)
 
     digits_positions = find_digits_positions(dst)
 
+    print(digits_positions)
+
     if digits_positions is None: return
     digits = recognize_digits_line_method(digits_positions, output, dst)
 
     print(digits)
+
+    cv2.imshow('output', output)
+    cv2.waitKey()
+    #cv2.destroyAllWindows()
 
     return digits
 
