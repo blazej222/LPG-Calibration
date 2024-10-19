@@ -16,7 +16,7 @@ DIGITS_LOOKUP = {
     (1, 1, 0, 0, 0, 1, 0): 7,
     (1, 1, 1, 1, 1, 1, 1): 8,
     (1, 1, 1, 0, 1, 1, 1): 9,
-    (0, 0, 0, 0, 0, 1, 1): '-'
+    # (0, 0, 0, 0, 0, 1, 1): '-'
 }
 H_W_Ratio = 1.9
 THRESHOLD = 80
@@ -26,8 +26,8 @@ arc_tan_theta = 6.0  # 数码管倾斜角度
 # crop_x0 = 260
 # crop_x1 = 890
 
-detect_digit_primary_dimension = 8 # how many pixels must be in column to detect horizontal pixel
-detect_digit_secondary_dimension = 8 # how many consecutive detected pixels must be next to another to start
+detect_digit_primary_dimension = 4 # how many pixels must be in column to detect horizontal pixel
+detect_digit_secondary_dimension = 4 # how many consecutive detected pixels must be next to another to start
 # detecting digit TODO: Might not be necessary
 
 
@@ -109,9 +109,9 @@ def find_digits_positions(img, reserved_threshold=20):
 
     digits_positions = []
     img_array = np.sum(img, axis=0)
-    horizon_position = helper_extract(img_array, threshold=7)
+    horizon_position = helper_extract(img_array, threshold=4)
     img_array = np.sum(img, axis=1)
-    vertical_position = helper_extract(img_array, threshold=20)
+    vertical_position = helper_extract(img_array, threshold=4)
     # make vertical_position has only one element
     if len(vertical_position) > 1:
         vertical_position = [(vertical_position[0][0], vertical_position[len(vertical_position) - 1][1])]
@@ -207,11 +207,11 @@ def recognize_digits_line_method(digits_positions, output_img, input_img):
         h, w = roi.shape
         suppose_W = max(1, int(h / H_W_Ratio))
 
-        # 消除无关符号干扰
-        if x1 - x0 < 25 and cv2.countNonZero(roi) / ((y1 - y0) * (x1 - x0)) < 0.2:
-            continue
+        # Eliminate irrelevant symbol interference
+        # if x1 - x0 < 25 and cv2.countNonZero(roi) / ((y1 - y0) * (x1 - x0)) < 0.2:
+        #     continue
 
-        # 对1的情况单独识别
+        # Identify case 1 separately
         if w < suppose_W / 2:
             x0 = max(x0 + w - suppose_W, 0)
             roi = input_img[y0:y1, x0:x1]
@@ -241,21 +241,22 @@ def recognize_digits_line_method(digits_positions, output_img, input_img):
             # plt.show()
             total = cv2.countNonZero(seg_roi)
             area = (xb - xa) * (yb - ya) * 0.9
-            # print('prob: ', total / float(area))
-            if total / float(area) > 0.25:
+            #print('prob: ', total / float(area))
+            if total / float(area) > 0.35:
                 on[i] = 1
         # print('encode: ', on)
         if tuple(on) in DIGITS_LOOKUP.keys():
             digit = DIGITS_LOOKUP[tuple(on)]
+            digits.append(digit)
         else:
             digit = '*'
 
-        digits.append(digit)
+        #digits.append(digit)
 
-        # 小数点的识别
-        # print('dot signal: ',cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9 / 16 * width * width))
-        if cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9. / 16 * width * width) > 0.65:
-            digits.append('.')
+        # Decimal point recognition
+        #print('dot signal: ',cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9 / 16 * width * width))
+        if cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9. / 16 * width * width) > 0.5 and digit == '*':
+            digits.append(',')
             cv2.rectangle(output_img,
                           (x0 + w - int(3 * width / 4), y0 + h - int(3 * width / 4)),
                           (x1, y1), (0, 128, 0), 2)
@@ -277,16 +278,16 @@ def extract_text_from_frame(frame, roi):
     output = blurred
     dst = preprocess(blurred, THRESHOLD, show=False)
 
-    cv2.imwrite("test.png", dst)
+    #cv2.imwrite("test.png", dst)
 
     digits_positions = find_digits_positions(dst)
 
-    print(digits_positions)
+    #print(digits_positions)
 
     if digits_positions is None: return
     digits = recognize_digits_line_method(digits_positions, output, dst)
 
-    print(digits)
+    #print(digits)
 
     cv2.imshow('output', output)
     cv2.waitKey()
@@ -303,9 +304,13 @@ frame_interval = int(fps)  # co jedną sekundę
 frame_count = 0
 
 # Definicje obszarów do ekstrakcji tekstu (x, y, szerokość, wysokość)
-roi_pole1 = (52, 1523, 341, 113)  # Przykładowy obszar dla Pole1
-roi_pole2 = (417, 1523, 342, 120)  # Przykładowy obszar dla Pole2
-roi_pole3 = (771, 1516, 363, 140)  # Przykładowy obszar dla Pole3
+roi_pole1 = (55, 1520, 341, 120)
+roi_pole2 = (415, 1520, 341, 120)
+roi_pole3 = (775, 1520, 341, 120)
+roi_pole4 = (1160, 1520, 341, 120)
+roi_pole5 = (1555, 1520, 341, 120)
+
+last_timestamp_min = 0
 
 # Otwórz plik do zapisu
 with open('output.txt', 'w') as file:
@@ -325,12 +330,43 @@ with open('output.txt', 'w') as file:
             pole1 = extract_text_from_frame(frame, roi_pole1)
             pole2 = extract_text_from_frame(frame, roi_pole2)
             pole3 = extract_text_from_frame(frame, roi_pole3)
+            pole4 = extract_text_from_frame(frame, roi_pole4)
+            pole5 = extract_text_from_frame(frame, roi_pole5)
+            if pole1 is not None:
+                pole1 = ''.join(str(e) for e in pole1)
+            else:
+                pole1 = 'x'
+
+            if pole2 is not None:
+                pole2 = ''.join(str(e) for e in pole2)
+            else:
+                pole2 = 'x'
+
+            if pole3 is not None:
+                pole3 = ''.join([str(e) for e in pole3])
+            else:
+                pole3 = 'x'
+
+            if pole4 is not None:
+                pole4 = ''.join([str(e) for e in pole4])
+            else:
+                pole4 = 'x'
+
+            if pole5 is not None:
+                pole5 = ''.join([str(e) for e in pole5])
+            else:
+                pole5 = 'x'
 
             # Zapis wyników do pliku
-            file.write(f"{time_stamp} {pole1} {pole2} {pole3}\n")
+            file.write(f"{time_stamp}   {pole1}    {pole2}    {pole3}\n")
+            print(time_stamp.seconds)
+            # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
+            #     print(time_stamp.min)
+            # last_timestamp_min = time_stamp.min
 
         frame_count += 1
 
 # Zwolnij zasoby
+file.close()
 cap.release()
 cv2.destroyAllWindows()
