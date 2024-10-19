@@ -1,3 +1,6 @@
 *.iws
 workspace.xml
 tasks.xml
+data/
+*.png
+__pycache__

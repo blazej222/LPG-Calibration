@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import time
 
 DIGITS_LOOKUP = {
     (1, 1, 1, 1, 1, 1, 0): 0,
@@ -21,10 +22,9 @@ DIGITS_LOOKUP = {
 H_W_Ratio = 1.9
 THRESHOLD = 80
 arc_tan_theta = 6.0  # 数码管倾斜角度
-# crop_y0 = 215
-# crop_y1 = 470
-# crop_x0 = 260
-# crop_x1 = 890
+
+video_path = '2024-09-20 15-21-39.mkv'
+output_file_path = 'output/2024-09-20 15-21-39-ocr-output.txt'
 
 detect_digit_primary_dimension = 4 # how many pixels must be in column to detect horizontal pixel
 detect_digit_secondary_dimension = 4 # how many consecutive detected pixels must be next to another to start
@@ -296,11 +296,10 @@ def extract_text_from_frame(frame, roi):
     return digits
 
 # Wczytaj wideo
-video_path = '2024-09-20 15-21-39.mkv'
 cap = cv2.VideoCapture(video_path)
 
 fps = cap.get(cv2.CAP_PROP_FPS)
-frame_interval = int(fps)  # co jedną sekundę
+frame_interval = 15 # co jedną sekundę
 frame_count = 0
 
 # Definicje obszarów do ekstrakcji tekstu (x, y, szerokość, wysokość)
@@ -314,7 +313,7 @@ last_timestamp_min = 0
 
 # Otwórz plik do zapisu
 with open('output.txt', 'w') as file:
-    file.write('Czas RPM     Benzyna    Gaz     Podcisnienie    Cisnienie\n')
+    #file.write('Czas RPM     Benzyna    Gaz     Podcisnienie    Cisnienie\n')
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -322,7 +321,7 @@ with open('output.txt', 'w') as file:
             break
 
         if frame_count % frame_interval == 0 and frame_count >= 120:
-            time_stamp = timedelta(seconds=int(frame_count // fps))
+            time_stamp = timedelta(seconds=int(frame_count // fps),milliseconds=int((frame_count % fps)* (1000 / fps)))
 
             # cv2.imshow("Frame",frame)
 
@@ -358,8 +357,8 @@ with open('output.txt', 'w') as file:
                 pole5 = 'x'
 
             # Zapis wyników do pliku
-            file.write(f"{time_stamp}   {pole1}    {pole2}    {pole3}   {pole4}     {pole5}\n")
-            print(time_stamp.seconds)
+            file.write(f"{time_stamp};{pole1};{pole2};{pole3};{pole4};{pole5}\n")
+            print(time_stamp)
             # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
             #     print(time_stamp.min)
             # last_timestamp_min = time_stamp.min
