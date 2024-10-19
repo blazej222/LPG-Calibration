@@ -23,8 +23,8 @@ H_W_Ratio = 1.9
 THRESHOLD = 80
 arc_tan_theta = 6.0  # 数码管倾斜角度
 
-video_path = '2024-09-20 15-21-39.mkv'
-output_file_path = 'output/2024-09-20 15-21-39-ocr-output.txt'
+video_path = 'data/videos/2024-09-20 15-21-39.mkv'
+output_file_path = 'data/output/2024-09-20 15-21-39-ocr-output.txt'
 
 detect_digit_primary_dimension = 4 # how many pixels must be in column to detect horizontal pixel
 detect_digit_secondary_dimension = 4 # how many consecutive detected pixels must be next to another to start
@@ -312,7 +312,7 @@ roi_pole5 = (1555, 1520, 341, 120)
 last_timestamp_min = 0
 
 # Otwórz plik do zapisu
-with open('output.txt', 'w') as file:
+with open(output_file_path, 'w') as file:
     #file.write('Czas RPM     Benzyna    Gaz     Podcisnienie    Cisnienie\n')
 
     while cap.isOpened():
@@ -357,6 +357,7 @@ with open('output.txt', 'w') as file:
                 pole5 = 'x'
 
             # Zapis wyników do pliku
+
             file.write(f"{time_stamp};{pole1};{pole2};{pole3};{pole4};{pole5}\n")
             print(time_stamp)
             # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
