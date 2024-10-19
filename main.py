@@ -289,8 +289,8 @@ def extract_text_from_frame(frame, roi):
 
     #print(digits)
 
-    cv2.imshow('output', output)
-    cv2.waitKey()
+    # cv2.imshow('output', output)
+    # cv2.waitKey()
     #cv2.destroyAllWindows()
 
     return digits
@@ -314,7 +314,7 @@ last_timestamp_min = 0
 
 # Otwórz plik do zapisu
 with open('output.txt', 'w') as file:
-    file.write('Czas Pole1 Pole2 Pole3\n')
+    file.write('Czas RPM     Benzyna    Gaz     Podcisnienie    Cisnienie\n')
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -358,7 +358,7 @@ with open('output.txt', 'w') as file:
                 pole5 = 'x'
 
             # Zapis wyników do pliku
-            file.write(f"{time_stamp}   {pole1}    {pole2}    {pole3}\n")
+            file.write(f"{time_stamp}   {pole1}    {pole2}    {pole3}   {pole4}     {pole5}\n")
             print(time_stamp.seconds)
             # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
             #     print(time_stamp.min)
