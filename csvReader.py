@@ -35,20 +35,32 @@ pressure_data.reset_index(drop=True, inplace=True)
 grouped_data = []
 
 # Dopasowanie na podstawie czasu
-for i in range(len(stft_data)):
-    time = stft_data.loc[i, 'SECONDS']
+for i in range(len(pressure_data)):
+    time = pressure_data.loc[i, 'SECONDS']
 
-    # Znajdź najbliższe czasowo wartości LTFT i ciśnienia
-    ltft_closest = ltft_data.iloc[(ltft_data['SECONDS'] - time).abs().argmin()]
-    pressure_closest = pressure_data.iloc[(pressure_data['SECONDS'] - time).abs().argmin()]
+    # Znajdź najbliższe czasowo wartości STFT i LTFT, które są późniejsze lub równe czasowi ciśnienia
+    stft_after_time = stft_data[stft_data['SECONDS'] >= time]
+    ltft_after_time = ltft_data[ltft_data['SECONDS'] >= time]
 
-    # Dodajemy dopasowany rekord
-    grouped_data.append([
-        time,  # czas z STFT
-        stft_data.loc[i, 'VALUE'],  # STFT
-        ltft_closest['VALUE'],  # LTFT (dopasowane czasowo)
-        pressure_closest['VALUE']  # Ciśnienie (dopasowane czasowo)
-    ])
+    # Jeśli są wartości późniejsze, dopasuj najbliższą w czasie
+    if not stft_after_time.empty:
+        stft_closest = stft_after_time.iloc[(stft_after_time['SECONDS'] - time).abs().argmin()]
+    else:
+        stft_closest = None
+
+    if not ltft_after_time.empty:
+        ltft_closest = ltft_after_time.iloc[(ltft_after_time['SECONDS'] - time).abs().argmin()]
+    else:
+        ltft_closest = None
+
+    # Dodajemy dopasowany rekord tylko, gdy znaleziono dopasowane wartości
+    if stft_closest is not None and ltft_closest is not None:
+        grouped_data.append([
+            time,  # czas z ciśnienia
+            stft_closest['VALUE'],  # STFT (dopasowane czasowo i późniejsze)
+            ltft_closest['VALUE'],  # LTFT (dopasowane czasowo i późniejsze)
+            pressure_data.loc[i, 'VALUE']  # Ciśnienie
+        ])
 
 # Przekształć listę w DataFrame
 df_grouped = pd.DataFrame(grouped_data, columns=['Time', 'STFT', 'LTFT', 'Pressure'])
