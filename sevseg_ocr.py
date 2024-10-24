@@ -1,5 +1,5 @@
 import pytesseract
-from datetime import timedelta
+from datetime import timedelta,datetime
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,7 +24,17 @@ THRESHOLD = 80
 arc_tan_theta = 6.0  # 数码管倾斜角度
 
 video_path = 'data/videos/2024-09-20 15-21-39.mkv'
-output_file_path = 'data/output/2024-09-20 15-21-39-ocr-output.txt'
+output_file_path = 'data/output/ocr-output/2024-09-20 15-21-39-ocr-output.txt'
+
+time_str = video_path.split('/')[-1].split('.')[0].split()[1]
+time_format = "%H-%M-%S"
+time_obj = datetime.strptime(time_str, time_format)
+
+midnight = datetime.combine(time_obj.date(), datetime.min.time())  # Ustalamy północ jako punkt odniesienia
+seconds_since_midnight = (time_obj - midnight)
+
+# print(seconds_since_midnight)
+# input()
 
 detect_digit_primary_dimension = 4 # how many pixels must be in column to detect horizontal pixel
 detect_digit_secondary_dimension = 4 # how many consecutive detected pixels must be next to another to start
@@ -122,80 +132,6 @@ def find_digits_positions(img, reserved_threshold=20):
         return digits_positions
     else:
         return None
-
-
-def recognize_digits_area_method(digits_positions, output_img, input_img):
-    digits = []
-    for c in digits_positions:
-        x0, y0 = c[0]
-        x1, y1 = c[1]
-        roi = input_img[y0:y1, x0:x1]
-        h, w = roi.shape
-        suppose_W = max(1, int(h / H_W_Ratio))
-        # 对1的情况单独识别
-        if w < suppose_W / 2:
-            x0 = x0 + w - suppose_W
-            w = suppose_W
-            roi = input_img[y0:y1, x0:x1]
-        width = (max(int(w * 0.15), 1) + max(int(h * 0.15), 1)) // 2
-        dhc = int(width * 0.8)
-        # print('width :', width)
-        # print('dhc :', dhc)
-
-        small_delta = int(h / arc_tan_theta) // 4
-        # print('small_delta : ', small_delta)
-        segments = [
-            # # version 1
-            # ((w - width, width // 2), (w, (h - dhc) // 2)),
-            # ((w - width - small_delta, (h + dhc) // 2), (w - small_delta, h - width // 2)),
-            # ((width // 2, h - width), (w - width // 2, h)),
-            # ((0, (h + dhc) // 2), (width, h - width // 2)),
-            # ((small_delta, width // 2), (small_delta + width, (h - dhc) // 2)),
-            # ((small_delta, 0), (w, width)),
-            # ((width, (h - dhc) // 2), (w - width, (h + dhc) // 2))
-
-            # # version 2
-            ((w - width - small_delta, width // 2), (w, (h - dhc) // 2)),
-            ((w - width - 2 * small_delta, (h + dhc) // 2), (w - small_delta, h - width // 2)),
-            ((width - small_delta, h - width), (w - width - small_delta, h)),
-            ((0, (h + dhc) // 2), (width, h - width // 2)),
-            ((small_delta, width // 2), (small_delta + width, (h - dhc) // 2)),
-            ((small_delta, 0), (w + small_delta, width)),
-            ((width - small_delta, (h - dhc) // 2), (w - width - small_delta, (h + dhc) // 2))
-        ]
-        # cv2.rectangle(roi, segments[0][0], segments[0][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[1][0], segments[1][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[2][0], segments[2][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[3][0], segments[3][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[4][0], segments[4][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[5][0], segments[5][1], (128, 0, 0), 2)
-        # cv2.rectangle(roi, segments[6][0], segments[6][1], (128, 0, 0), 2)
-        # cv2.imshow('i', roi)
-        # cv2.waitKey()
-        # cv2.destroyWindow('i')
-        on = [0] * len(segments)
-
-        for (i, ((xa, ya), (xb, yb))) in enumerate(segments):
-            seg_roi = roi[ya:yb, xa:xb]
-            # plt.imshow(seg_roi)
-            # plt.show()
-            total = cv2.countNonZero(seg_roi)
-            area = (xb - xa) * (yb - ya) * 0.9
-            print(total / float(area))
-            if total / float(area) > 0.45:
-                on[i] = 1
-
-        # print(on)
-
-        if tuple(on) in DIGITS_LOOKUP.keys():
-            digit = DIGITS_LOOKUP[tuple(on)]
-        else:
-            digit = '*'
-        digits.append(digit)
-        cv2.rectangle(output_img, (x0, y0), (x1, y1), (0, 128, 0), 2)
-        cv2.putText(output_img, str(digit), (x0 - 10, y0 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 128, 0), 2)
-
-    return digits
 
 
 def recognize_digits_line_method(digits_positions, output_img, input_img):
@@ -331,35 +267,45 @@ with open(output_file_path, 'w') as file:
             pole3 = extract_text_from_frame(frame, roi_pole3)
             pole4 = extract_text_from_frame(frame, roi_pole4)
             pole5 = extract_text_from_frame(frame, roi_pole5)
+
+            shouldSave = True
+
             if pole1 is not None:
                 pole1 = ''.join(str(e) for e in pole1)
             else:
                 pole1 = 'x'
+                shouldSave = False
 
             if pole2 is not None:
                 pole2 = ''.join(str(e) for e in pole2)
             else:
                 pole2 = 'x'
+                shouldSave = False
 
             if pole3 is not None:
                 pole3 = ''.join([str(e) for e in pole3])
             else:
                 pole3 = 'x'
+                shouldSave = False
 
             if pole4 is not None:
                 pole4 = ''.join([str(e) for e in pole4])
             else:
                 pole4 = 'x'
+                shouldSave = False
 
             if pole5 is not None:
                 pole5 = ''.join([str(e) for e in pole5])
             else:
                 pole5 = 'x'
+                shouldSave = False
 
             # Zapis wyników do pliku
 
-            file.write(f"{time_stamp};{pole1};{pole2};{pole3};{pole4};{pole5}\n")
-            print(time_stamp)
+            time_write = (time_stamp+seconds_since_midnight).total_seconds()
+
+            if shouldSave: file.write(f"{time_write};{pole1};{pole2};{pole3};{pole4};{pole5}\n")
+            print(time_write)
             # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
             #     print(time_stamp.min)
             # last_timestamp_min = time_stamp.min
