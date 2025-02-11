@@ -4,3 +4,4 @@ tasks.xml
 data/
 *.png
 __pycache__
+.idea/
