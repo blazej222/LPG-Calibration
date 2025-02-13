@@ -21,16 +21,16 @@ DIGITS_LOOKUP = {
 }
 H_W_Ratio = 1.9
 THRESHOLD = 80
-arc_tan_theta = 6.0  # 数码管倾斜角度
+arc_tan_theta = 6.0
 
-video_path = 'data/videos/2024-09-20 15-21-39.mkv'
-output_file_path = 'data/output/ocr-output/2024-09-20 15-21-39-ocr-output.txt'
+video_path = '../data/videos/2024-10-02 15-18-34.mkv'
+output_file_path = '../data/output/ocr-output/2024-10-02 15-18-34-ocr-output-new.txt'
 
 time_str = video_path.split('/')[-1].split('.')[0].split()[1]
 time_format = "%H-%M-%S"
 time_obj = datetime.strptime(time_str, time_format)
 
-midnight = datetime.combine(time_obj.date(), datetime.min.time())  # Ustalamy północ jako punkt odniesienia
+midnight = datetime.combine(time_obj.date(), datetime.min.time())  # Set midnight as time of reference
 seconds_since_midnight = (time_obj - midnight)
 
 # print(seconds_since_midnight)
@@ -192,7 +192,7 @@ def recognize_digits_line_method(digits_positions, output_img, input_img):
         # Decimal point recognition
         #print('dot signal: ',cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9 / 16 * width * width))
         if cv2.countNonZero(roi[h - int(3 * width / 4):h, w - int(3 * width / 4):w]) / (9. / 16 * width * width) > 0.5 and digit == '*':
-            digits.append(',')
+            digits.append('.')
             cv2.rectangle(output_img,
                           (x0 + w - int(3 * width / 4), y0 + h - int(3 * width / 4)),
                           (x1, y1), (0, 128, 0), 2)
@@ -205,7 +205,7 @@ def recognize_digits_line_method(digits_positions, output_img, input_img):
     return digits
 
 
-# Funkcja do ekstrakcji tekstu z określonego regionu
+# Function to extract text from selected area
 def extract_text_from_frame(frame, roi):
     x, y, w, h = roi
     roi_frame = frame[y:y + h, x:x + w]
@@ -231,25 +231,25 @@ def extract_text_from_frame(frame, roi):
 
     return digits
 
-# Wczytaj wideo
+# Load video
 cap = cv2.VideoCapture(video_path)
 
 fps = cap.get(cv2.CAP_PROP_FPS)
-frame_interval = 15 # co jedną sekundę
+frame_interval = 15 # every one second, assuming source video is in 15fps
 frame_count = 0
 
-# Definicje obszarów do ekstrakcji tekstu (x, y, szerokość, wysokość)
-roi_pole1 = (55, 1520, 341, 120)
-roi_pole2 = (415, 1520, 341, 120)
-roi_pole3 = (775, 1520, 341, 120)
-roi_pole4 = (1160, 1520, 341, 120)
-roi_pole5 = (1555, 1520, 341, 120)
+# Define areas for text extraction (x, y, width, height)
+roi_field1 = (55, 1460, 341, 120)
+roi_field2 = (415, 1460, 341, 120)
+roi_field3 = (775, 1460, 341, 120)
+roi_field4 = (1160, 1460, 341, 120)
+roi_field5 = (1555, 1460, 341, 120)
 
 last_timestamp_min = 0
 
-# Otwórz plik do zapisu
+# Open file to write
 with open(output_file_path, 'w') as file:
-    #file.write('Czas RPM     Benzyna    Gaz     Podcisnienie    Cisnienie\n')
+    file.write('Time;RPM;Gasoline;Gas;Pressure;AirPressure\n')
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -261,50 +261,50 @@ with open(output_file_path, 'w') as file:
 
             # cv2.imshow("Frame",frame)
 
-            # Ekstrakcja tekstu z poszczególnych pól
-            pole1 = extract_text_from_frame(frame, roi_pole1)
-            pole2 = extract_text_from_frame(frame, roi_pole2)
-            pole3 = extract_text_from_frame(frame, roi_pole3)
-            pole4 = extract_text_from_frame(frame, roi_pole4)
-            pole5 = extract_text_from_frame(frame, roi_pole5)
+            # Extract text from selected frames
+            field1 = extract_text_from_frame(frame, roi_field1)
+            field2 = extract_text_from_frame(frame, roi_field2)
+            field3 = extract_text_from_frame(frame, roi_field3)
+            field4 = extract_text_from_frame(frame, roi_field4)
+            field5 = extract_text_from_frame(frame, roi_field5)
 
             shouldSave = True
 
-            if pole1 is not None:
-                pole1 = ''.join(str(e) for e in pole1)
+            if field1 is not None:
+                field1 = ''.join(str(e) for e in field1)
             else:
-                pole1 = 'x'
+                field1 = 'x'
                 shouldSave = False
 
-            if pole2 is not None:
-                pole2 = ''.join(str(e) for e in pole2)
+            if field2 is not None:
+                field2 = ''.join(str(e) for e in field2)
             else:
-                pole2 = 'x'
+                field2 = 'x'
                 shouldSave = False
 
-            if pole3 is not None:
-                pole3 = ''.join([str(e) for e in pole3])
+            if field3 is not None:
+                field3 = ''.join([str(e) for e in field3])
             else:
-                pole3 = 'x'
+                field3 = 'x'
                 shouldSave = False
 
-            if pole4 is not None:
-                pole4 = ''.join([str(e) for e in pole4])
+            if field4 is not None:
+                field4 = ''.join([str(e) for e in field4])
             else:
-                pole4 = 'x'
+                field4 = 'x'
                 shouldSave = False
 
-            if pole5 is not None:
-                pole5 = ''.join([str(e) for e in pole5])
+            if field5 is not None:
+                field5 = ''.join([str(e) for e in field5])
             else:
-                pole5 = 'x'
+                field5 = 'x'
                 shouldSave = False
 
-            # Zapis wyników do pliku
+            # Write results to file
 
             time_write = (time_stamp+seconds_since_midnight).total_seconds()
 
-            if shouldSave: file.write(f"{time_write};{pole1};{pole2};{pole3};{pole4};{pole5}\n")
+            if shouldSave: file.write(f"{time_write};{field1};{field2};{field3};{field4};{field5}\n")
             print(time_write)
             # if time_stamp.seconds != last_timestamp_min and time_stamp.seconds % 60:
             #     print(time_stamp.min)
@@ -312,7 +312,7 @@ with open(output_file_path, 'w') as file:
 
         frame_count += 1
 
-# Zwolnij zasoby
+# Release resources
 file.close()
 cap.release()
 cv2.destroyAllWindows()
