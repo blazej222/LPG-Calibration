@@ -1,5 +1,8 @@
 This file presents request and response when actual driving parameters are read
 
+Left side crc is on last byte, it equals to the sum of all previous bytes (within one byte range)
+Right side is sum of all bytes - 0x30
+
 C0 0B 0B D6 -> 0B B7 7A 6B 9B 00 17 64 14 82 6B 82 6A 02 69 02 68 00 00 00 00
 C0 40 29 29 -> 40 00 05 15
 

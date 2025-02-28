@@ -1,0 +1,36 @@
+0 - 0x00
+0.00 - 0x01
+.
+.
+.
+0.00 - 0x0A (10)
+0.01 - 0x0B (11)
+0.99 - 0x68 (110)
+2.11 - 0xD2 (210)
+2.33 - 0xE6 (230)
+2.43 - 0xF0 (240)
+2.49 - 0xF5 (245)
+2.50 - 0xF6 (246)
+2.51 - 0xF7 (247)
+2.53 - 0xF9 (249)
+
+
+
+
+1.91 - 0xFA (250)
+1.91 - 0xFF (255)
+1.91 - 0xFE (254)
+
+x = (y-10)/94.4
+
+it's the first byte in 0B transmission
+2nd byte is Tred - every -1 decrease on byte value maps to 0.5 T increase
+3nd byte is Tgas - same as above
+4,5,6 byte is unknown
+7th byte is RPM, -32 caused RPM increase by 400
+8th byte is RPM also - 32 caused rpm increase by 10 rpm
+9th byte is related to Gas injection time, -32 caused gas injection time to go to 0.00, but can be also Benzin injection
+as -2 caused benzin injection time to increase by 0.68
+10th byte is related to Benzin injection time, -32 caused injection time to go down by 0.04
+11th byte is some friction of benzin
+12th byte is also benzin
