@@ -34,3 +34,4 @@ as -2 caused benzin injection time to increase by 0.68
 10th byte is related to Benzin injection time, -32 caused injection time to go down by 0.04
 11th byte is some friction of benzin
 12th byte is also benzin
+13th byte is also benzin

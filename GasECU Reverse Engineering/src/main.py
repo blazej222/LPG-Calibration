@@ -82,8 +82,17 @@ def process_data(data):
         b"\xC0\x51\x15\x26": b"\x51\x15\x0E\x9C",
         b"\xC0\x40\x28\x28": b"\x40\x00\x00",
         # b"\xBC\xE1\xE1\x7E": b"\xBC\xE1\xE1\x7E"
-        b"\xC0\x0B\x0B\xD6": b"\x0B\x79\x69\x93\x9B\x6B\x17\x65\xBA\xA2\x49\x82\x46\x02\x49\x02\x48\x03\x0C\x03\x08"
-                             b"\x03\x06\x03\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+        b"\xC0\x0B\x0B\xD6": b"\x0B"
+                             b"\x79"  # Air pressure
+                             b"\x69"  # Tred
+                             b"\x93"  # Tgas
+                             b"\x9B\x6B\x17"  # Unknown
+                             b"\x65\xBA"  # RPM
+                             b"\xC8\x00\xA8\x00"  # Benzin injection time injector 1/2
+                             b"\x28\x00\x28\x00" # Benzin injection time injector 3/4
+                             b"\x00\x00\x00\x00" # Gas injection time injector 1/2
+                             b"\x00\x00\x00\x00" # Gas injection time injector 3/4
+                             b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
                              b"\x00\x17\x72\x00\x00\xFF\x01\x88\x00\x02",
 
 
@@ -163,7 +172,7 @@ if __name__ == "__main__":
     ser = serial.Serial()
     ser.baudrate = 9600
     ser.timeout = 0
-    ser.port = "COM18"
+    ser.port = "COM11"
     ser.open()
 
     to_send = []
