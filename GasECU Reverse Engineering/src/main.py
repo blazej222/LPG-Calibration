@@ -88,10 +88,10 @@ def process_data(data):
                              b"\x93"  # Tgas
                              b"\x9B\x6B\x17"  # Unknown
                              b"\x65\xBA"  # RPM
-                             b"\xC8\x00\xA8\x00"  # Benzin injection time injector 1/2
-                             b"\x28\x00\x28\x00" # Benzin injection time injector 3/4
-                             b"\x00\x00\x00\x00" # Gas injection time injector 1/2
-                             b"\x00\x00\x00\x00" # Gas injection time injector 3/4
+                             b"\xA1\x76\x81\x76"  # Benzine injection time injector 1/2
+                             b"\x01\x76\x01\x76" # Benzine injection time injector 3/4
+                             b"\x01\x76\x01\x76" # Gas injection time injector 1/2
+                             b"\x01\x76\x01\x76" # Gas injection time injector 3/4
                              b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
                              b"\x00\x17\x72\x00\x00\xFF\x01\x88\x00\x02",
 
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     ser = serial.Serial()
     ser.baudrate = 9600
     ser.timeout = 0
-    ser.port = "COM11"
+    ser.port = "COM18"
     ser.open()
 
     to_send = []

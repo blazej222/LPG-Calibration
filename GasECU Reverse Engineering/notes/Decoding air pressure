@@ -35,3 +35,30 @@ as -2 caused benzin injection time to increase by 0.68
 11th byte is some friction of benzin
 12th byte is also benzin
 13th byte is also benzin
+
+-------------------------------------
+
+Decoding benzine injection time:
+
+Injector 1/2 baseline is as follows: A0 00 80 00
+Injector 3/4 baseline is as follows: 00 00 00 00
+
+AA 00 8A 00 0A 00 0A 00 - 13.69 (10)
+A1 00 81 00 01 00 01 00 - 1.37 (1)
+B4 00 94 00 14 00 14 00 - 27.38 (20)
+BE 00 9E 00 1E 00 1E 00 - 41.07 (30)
+
+First byte of each pair is 1.369
+
+A0 32 80 32 00 32 00 32 - 0.27 (50)
+A0 49 80 49 00 49 00 49 - 0.39 (73)
+A0 64 80 64 00 64 00 64 - 0.53 (100)
+A0 C8 80 C8 00 C8 00 C8 - 1.07 (200)
+
+Second byte of each pair is 0,00535
+
+1.369x + 0.00535y = result
+
+----------------------------------
+
+RPM -
