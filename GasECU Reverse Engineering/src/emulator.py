@@ -81,6 +81,10 @@ def process_data(data):
         b"\xC0\x51\x14\x25": b"\x51\x14\x01\x76",
         b"\xC0\x51\x15\x26": b"\x51\x15\x0E\x9C",
         b"\xC0\x40\x28\x28": b"\x40\x00\x00",
+
+        #Experimental - added without real data read
+        b"\xC0\x07\x18\xDF": b"\x07\x18\x00",
+
         # b"\xBC\xE1\xE1\x7E": b"\xBC\xE1\xE1\x7E"
         b"\xC0\x0B\x0B\xD6": b"\x0B"
                              b"\x79"  # Air pressure
@@ -156,7 +160,9 @@ def process_data(data):
 
         b"\xC0\x12\x68\x3A": b"\x12\x68\x00\x00",
         # b"\xC0\x40\x0D\x0D": b"\x40\x00\x64\x74",
-        # b"\xC0\x40\x0F\x0F": b"\x40\x00\x17\x27"
+        # b"\xC0\x40\x0F\x0F": b"\x40\x00\x17\x27",
+        b"\xC2\x01\x01\x6B\x87": b"",
+
         }
     return responses.get(data, b'')
 
@@ -168,35 +174,68 @@ def calculate_outgoing_crc(bytearr):
     return (crc - 0x30) & 0xFF
 
 
+
 if __name__ == "__main__":
-    ser = serial.Serial()
-    ser.baudrate = 9600
-    ser.timeout = 0
-    ser.port = "COM18"
-    ser.open()
+    ser = serial.Serial(
+        port="COM18",
+        baudrate=9600,
+        timeout=0.1
+    )
 
-    to_send = []
-
-    # input_buffer = []
+    input_buffer = bytearray()
 
     while True:
-        data = ser.read(ser.in_waiting)
-        length = len(data)
-        # if length > 0:
-        #     print(length)
+        # Odczytaj wszystkie aktualnie dostępne bajty.
+        # Jeśli bufor portu jest pusty, poczekaj na minimum 1 bajt.
+        data = ser.read(ser.in_waiting or 1)
 
-        if length == 0:
+        if not data:
             continue
 
-        # print("Processing data")
-        response = process_data(data)
-        if response:
-            # print("We got this")
-            ser.write(bytes([0xD0]))
-            crc = calculate_outgoing_crc(data)
-            # print(crc)
-            response = response + calculate_outgoing_crc(response).to_bytes()
-            # print(response)
-            ser.write(response)
-        else:
-            print(f"Unknown data: {data.hex().upper()}")
+        # Dodaj odebrane bajty do bufora
+        input_buffer.extend(data)
+
+        # Przetwarzaj wszystkie kompletne ramki z bufora
+        while input_buffer:
+
+            # Szukamy początku ramki (C0 lub C2)
+            if input_buffer[0] not in (0xC0, 0xC2):
+                del input_buffer[0]
+                continue
+
+            # Określamy długość ramki
+            frame_length = 5 if input_buffer[0] == 0xC2 else 4
+
+            # Nie mamy jeszcze całej ramki - czekamy
+            if len(input_buffer) < frame_length:
+                break
+
+            # Pobieramy kompletną ramkę
+            frame = bytes(input_buffer[:frame_length])
+
+            # Specjalna ramka bez odpowiedzi
+            if frame == b"\xC2\x01\x01\x6B\x87":
+                del input_buffer[:frame_length]
+                continue
+
+            # Szukamy odpowiedzi na ramkę
+            response = process_data(frame)
+
+            if response:
+                # Usuwamy przetworzoną ramkę z bufora
+                del input_buffer[:frame_length]
+
+                # Wysyłamy odpowiedź
+                ser.write(b"\xD0")
+
+                crc = calculate_outgoing_crc(response)
+                response_with_crc = response + bytes([crc])
+
+                ser.write(response_with_crc)
+
+            else:
+                print(f"Unknown data: {frame.hex().upper()}")
+
+                # Przesuwamy bufor o jeden bajt,
+                # aby spróbować odzyskać synchronizację
+                del input_buffer[0]
