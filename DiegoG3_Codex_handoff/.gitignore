@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.vscode/
+.idea/
+vendor/
+logs/
+*.log
+DiegoG3_measurements_handoff.csv
+reference/temperature_lut_check.csv
+FINDINGS.local.md
