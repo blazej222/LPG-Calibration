@@ -40,7 +40,8 @@ data class DashboardSettings(
     val pollIntervalMs: Long = 200,
     val assertControlLines: Boolean = true,
     val originalPolling: Boolean = false,
-    val averageInjectionTimes: Boolean = false,
+    val averageInjectionTimes: Boolean = true,
+    val injectorCount: Int = 4,
 )
 
 enum class ConnectionPhase { DISCONNECTED, PERMISSION, CONNECTING, INITIALIZING, STREAMING, STOPPING, ERROR }
@@ -121,7 +122,8 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
                 preferences.getBoolean("thirdTemperature", false)),
             preferences.getLong("interval", 200).coerceIn(100, 2000),
             preferences.getBoolean("controlLines", true), preferences.getBoolean("originalPolling", false),
-            averageInjectionTimes = preferences.getBoolean("averageInjectionTimes", false))
+            averageInjectionTimes = preferences.getBoolean("averageInjectionTimes", true),
+            injectorCount = preferences.getInt("injectorCount", 4).coerceIn(1, 8))
     }
 
     fun updateSettings(settings: DashboardSettings) {
@@ -132,13 +134,20 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
             .putBoolean("thirdTemperature", settings.decoder.thirdTemperatureFromPayload)
             .putLong("interval", settings.pollIntervalMs).putBoolean("controlLines", settings.assertControlLines)
             .putBoolean("originalPolling", settings.originalPolling)
-            .putBoolean("averageInjectionTimes", settings.averageInjectionTimes).apply()
+            .putBoolean("averageInjectionTimes", settings.averageInjectionTimes)
+            .putInt("injectorCount", settings.injectorCount.coerceIn(1, 8)).apply()
         mutableState.update { it.copy(settings = settings, fresh = false) }
     }
 
     fun setAverageInjectionTimes(enabled: Boolean) {
         preferences.edit().putBoolean("averageInjectionTimes", enabled).apply()
         mutableState.update { it.copy(settings = it.settings.copy(averageInjectionTimes = enabled)) }
+    }
+
+    fun setInjectorCount(count: Int) {
+        require(count in 1..8)
+        preferences.edit().putInt("injectorCount", count).apply()
+        mutableState.update { it.copy(settings = it.settings.copy(injectorCount = count)) }
     }
 
     fun refreshDevices() {

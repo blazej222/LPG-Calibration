@@ -55,6 +55,7 @@ fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (F
 @Composable
 private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
     val t = state.telemetry
+    val injectorCount = state.settings.injectorCount
     val width = LocalConfiguration.current.screenWidthDp
     val columns = if (width >= 900) 6 else if (width >= 600) 3 else 2
     LazyVerticalGrid(columns = GridCells.Fixed(columns),
@@ -75,16 +76,11 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             if (state.settings.averageInjectionTimes) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    AverageInjectionCard("Czas wtrysku benzyny", t?.petrol?.averageInjectionTimeMs(), live, Modifier.weight(1f))
-                    AverageInjectionCard("Czas wtrysku gazu", t?.gas?.averageInjectionTimeMs(), live, Modifier.weight(1f))
+                    AverageInjectionCard("Czas wtrysku benzyny", t?.petrol?.averageInjectionTimeMs(injectorCount), live, Modifier.weight(1f))
+                    AverageInjectionCard("Czas wtrysku gazu", t?.gas?.averageInjectionTimeMs(injectorCount), live, Modifier.weight(1f))
                 }
             } else {
-                Card {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Czasy wtrysku · ms", style = MaterialTheme.typography.titleMedium)
-                        InjectionTable(t, live)
-                    }
-                }
+                InjectionChannels(t, live, injectorCount)
             }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
@@ -123,26 +119,44 @@ private fun AverageInjectionCard(label: String, averageMs: Double?, live: Boolea
 }
 
 @Composable
-private fun InjectionTable(t: Telemetry?, live: Boolean) {
-    BoxWithConstraints {
-        val columns = if (maxWidth < 600.dp) 4 else 8
+private fun InjectionChannels(t: Telemetry?, live: Boolean, injectorCount: Int) {
+    val fontScale = LocalConfiguration.current.fontScale.coerceAtLeast(1f)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Keep cards readable and balance rows, e.g. six injectors form two rows of three.
+        val maxColumns = ((maxWidth + 12.dp) / (220.dp * fontScale + 12.dp)).toInt().coerceIn(1, 4)
+        val rowCount = (injectorCount + maxColumns - 1) / maxColumns
+        val columns = (injectorCount + rowCount - 1) / rowCount
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            for (start in 0 until 8 step columns) {
-                Row(Modifier.fillMaxWidth()) {
-                    Column(Modifier.width(70.dp)) {
-                        Text("Kanał", style = MaterialTheme.typography.labelMedium)
-                        Text("Benzyna", style = MaterialTheme.typography.bodyMedium)
-                        Text("Gaz", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    for (index in start until start + columns) {
-                        Column(Modifier.weight(1f)) {
-                            Text("${index + 1}", style = MaterialTheme.typography.labelMedium)
-                            Text(if (live) t?.petrol?.get(index)?.decoded.number(2) else "—")
-                            Text(if (live) t?.gas?.get(index)?.decoded.number(2) else "—", color = MaterialTheme.colorScheme.primary)
+            Text("Czasy wtrysku · liczba kanałów: $injectorCount", style = MaterialTheme.typography.titleLarge)
+            for (row in (0 until injectorCount).chunked(columns)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    for (index in row) {
+                        Card(Modifier.weight(1f).heightIn(min = 220.dp)) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Wtryskiwacz ${index + 1}", style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold)
+                                InjectionValue("Benzyna", t?.petrol?.getOrNull(index)?.decoded, live)
+                                HorizontalDivider()
+                                InjectionValue("Gaz", t?.gas?.getOrNull(index)?.decoded, live, gas = true)
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun InjectionValue(label: String, timeMs: Double?, live: Boolean, gas: Boolean = false) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(if (live) timeMs.number(2) else "—", modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
+                color = if (live && gas) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+            Text("ms", modifier = Modifier.alignByBaseline(), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -154,8 +168,14 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text("Wyświetlanie", style = MaterialTheme.typography.titleLarge)
-            SettingSwitch("Średnie czasy wtrysku", "Dwa duże kafelki zamiast tabeli kanałów. Średnia osobno dla benzyny i gazu, z pominięciem zerowych czasów; same zera dają 0,00 ms.",
+            SettingSwitch("Średnie czasy wtrysku", "Dwa duże kafelki zamiast poszczególnych wtryskiwaczy. Średnia z wybranej liczby kanałów, z uwzględnieniem zerowych czasów.",
                 settings.averageInjectionTimes, true, model::setAverageInjectionTimes)
+        }
+        item {
+            ChoiceRow("Liczba zainstalowanych wtryskiwaczy", (1..8).map { "$it" to it },
+                settings.injectorCount, true, model::setInjectorCount)
+            Text("Domyślnie 4. Dotyczy obu paliw: widoczne są kanały 1–${settings.injectorCount} i tylko one wchodzą do średnich. Zmiana nie wymaga rozłączenia.",
+                style = MaterialTheme.typography.bodySmall)
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {

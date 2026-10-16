@@ -1,6 +1,6 @@
 # GAS ECU — dashboard Diego G3 dla Androida 10
 
-Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację sesji Diego G3 i cykliczny odczyt `C0 0B 0B D6`. Dashboard pokazuje RPM, temperatury reduktora/gazu, ciśnienie gazu, MAP, napięcie jako pole o niepotwierdzonej nazwie fizycznej, stan instalacji oraz czasy wtrysku 8+8 kanałów. Kanały opcjonalne pozostają widoczne; zera nie oznaczają wykrycia liczby cylindrów.
+Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację sesji Diego G3 i cykliczny odczyt `C0 0B 0B D6`. Dashboard pokazuje RPM, temperatury reduktora/gazu, ciśnienie gazu, MAP, napięcie jako pole o niepotwierdzonej nazwie fizycznej, stan instalacji oraz czasy wtrysku. Protokół odczytuje 8+8 kanałów, a widok i średnie uwzględniają ręcznie wybraną liczbę wtryskiwaczy; zera nie oznaczają wykrycia liczby cylindrów.
 
 ## Uruchomienie na K706
 
@@ -10,7 +10,7 @@ Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację
 4. Wybierz **Połącz** i zaakceptuj systemowe okno dostępu do USB. Inicjalizacja trwa kilka sekund; jej postęp jest widoczny.
 5. Wróć na **Dashboard**. Domyślny minimalny odstęp między odczytami to 200 ms. Ustawienia profilu czujników można zmieniać po rozłączeniu.
 
-W **Ustawienia → Wyświetlanie → Średnie czasy wtrysku** można zastąpić tabelę kanałów dwoma dużymi kafelkami: czasem wtrysku benzyny i gazu. Opcja jest zapamiętywana i można ją zmieniać podczas połączenia. Każda średnia obejmuje niezerowe czasy danego paliwa; gdy wszystkie są zerowe, wynosi 0,00 ms. To reguła prezentacji pomijająca puste kanały, a nie wykrywanie liczby cylindrów. Brak lub nieaktualność danych daje „—”.
+W **Ustawienia → Wyświetlanie** opcja **Średnie czasy wtrysku** jest domyślnie włączona przy nowej instalacji. Pokazuje dwa duże kafelki: czas wtrysku benzyny i gazu. Wcześniej zapisany wybór pozostaje zachowany. **Liczba zainstalowanych wtryskiwaczy** pozwala wybrać 1–8 (domyślnie 4), wspólnie dla obu paliw. Średnia obejmuje wyłącznie pierwsze N kanałów, także te z czasem 0,00 ms. Po wyłączeniu średnich każdy wybrany kanał ma osobny duży kafelek z czasem benzyny i gazu; szerokość kafelków i liczba kolumn dopasowują się do dostępnego miejsca. Oba ustawienia są zapamiętywane i dostępne podczas połączenia. Brak lub nieaktualność danych daje „—”.
 
 Wybrane VID/PID/port i ustawienia są zapamiętywane. Jeśli podłączono kilka identycznych adapterów, po ponownym wykryciu potrzebny jest jednoznaczny wybór. Nie ma automatycznego łączenia po podłączeniu kabla. Ekran pozostaje włączony podczas połączenia. Przejście aplikacji w tło zatrzymuje transmisję; obrót ekranu zachowuje sesję. Wróciwszy do aplikacji, wybierz **Połącz**.
 
