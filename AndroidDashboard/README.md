@@ -44,6 +44,53 @@ Weryfikacja sprzętowa wymaga K706, kabla i ECU: wybór USB → zgoda → koniec
 
 ## Budowanie i testy
 
+### Gotowy emulator Androida z USB i istniejącym emulatorem ECU
+
+Środowisko używa gotowego obrazu **Google APIs Android 16 / API 36 x86_64 bez Play Store**, rewizja 7. Nie kompilujemy Androida i nie zmieniamy kodu aplikacji. Osobny AVD **GAS_ECU_USB_API36** ma ekran 1024×600 / 160 dpi i jest zarejestrowany w Android Studio. Pierwotny AVD Google Play API 37 pozostaje niezmieniony.
+
+1. Uruchom swój dotychczasowy emulator Diego G3 na **COM18**. **COM19** musi być wolny.
+2. Z katalogu głównego repozytorium uruchom:
+
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\AndroidDashboard\tools\start-com-usb-emulator.ps1
+   ```
+
+3. Skrypt uruchomi most COM19, otworzy okno osobnego emulatora, sprawdzi USB host i zainstaluje aktualny debug APK, jeśli plik istnieje. Pierwsza konfiguracja może wymagać restartu testowego systemu. Z Android Studio można uruchamiać aplikację na już działającym urządzeniu **emulator-5556 / GAS_ECU_USB_API36**.
+4. W GAS ECU wybierz **Ustawienia → QEMU USB SERIAL · Ftdi → Połącz**, zaakceptuj systemową zgodę USB i wróć na **Dashboard**.
+
+Uruchamiaj AVD przez skrypt: zwykły start AVD w Android Studio nie dodaje argumentów wirtualnego USB. Opcjonalne parametry: `-Headless`, `-ComPort COM19`, `-BridgePort 34567`, `-EmulatorPort 5556`, `-TraceBridge`, `-SdkPath ...`. Ponowne uruchomienie środowiska wymaga zakończenia poprzedniej sesji.
+
+Zatrzymanie i zwolnienie COM19:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\AndroidDashboard\tools\stop-com-usb-emulator.ps1
+```
+
+Skrypt sprawdza tożsamość procesów i zatrzymuje wyłącznie zarządzany testowy AVD oraz własny most. Nie zamyka emulatora ECU na COM18 ani innych AVD.
+
+```text
+GAS ECU → Android UsbManager → wirtualny FTDI 0403:6001
+        → QEMU → lokalny socket → most Python → COM19 ↔ COM18 → Twój emulator Diego G3
+```
+
+Aplikacja nadal używa transportu USB. TCP występuje wyłącznie między QEMU a mostem na komputerze. `com_usb_bridge.py` przekazuje bajty bez interpretacji i generowania odpowiedzi; źródłem danych pozostaje istniejący emulator w `GasECU Reverse Engineering`. Most słucha wyłącznie na `127.0.0.1`. Socket nie odwzorowuje sprzętowych linii sterujących ani parametrów fizycznego kabla.
+
+Pliki AVD, logi, identyfikatory procesów i zrzuty znajdują się w `AndroidDashboard/build/usb-api36-avd/`. Deklaracja USB host jest dodawana przy użyciu `adb root` do zapisywalnej warstwy **testowego AVD**. Aplikacja nie wymaga roota; oryginalne obrazy SDK nie są edytowane w miejscu. Skrypt sprawdza konfigurację przy każdym uruchomieniu i w razie potrzeby ją odtwarza.
+
+Instalacja obrazu na innym komputerze:
+
+```powershell
+python .\AndroidDashboard\tools\install-usb-test-image.py --sdk-root "$env:LOCALAPPDATA\Android\Sdk"
+```
+
+Instalator pobiera oficjalny katalog Google i obraz `system-images;android-36;google_apis;x86_64`, sprawdzając rozmiar oraz sumę archiwum. Dla rewizji 7: **1895447397 bajtów**, SHA-1 `c6bf44bdcd885bb902b4ba752d111a073ad7a817`. Archiwum i zapis pochodzenia są w `build/downloads/`. Launcher korzysta z Pythona z pyserial w istniejącym `GasECU Reverse Engineering/.venv/Scripts/python.exe`.
+
+Google Play API 37 nie deklaruje USB host i nie daje `adb root`. Sprawdzono też gotowy AOSP API 29, ale jego starsze jądro nie udostępniło kontrolera xHCI, a wariant UHCI nie zakończył poprawnie startu. Docelowo wybrano gotowy Google APIs API 36. Zgodność z fizycznym radiem Android 10 nadal wymaga próby na sprzęcie.
+
+Potwierdzono pełne połączenie aplikacji przez wirtualne USB z istniejącym emulatorem na COM18: wybór FTDI, zgoda USB, 77 żądań inicjalizacji i **148 ramek 0B bez timeoutów i błędnych sum**. Dashboard: **860 RPM, gaz (5), 1.17 bar, MAP 0.41 bar, Tred 33.5°C, Tgas 18.2°C**. To test integracyjny z emulatorem **[E]**, bez prawdziwego ECU. Nie zmienia przeliczników [X/M] ani interpretacji pól [H]/[N]. Sprawdzono także pełne zatrzymanie i ponowny start AVD z zachowaniem USB host.
+
+Mechanizmy konfiguracji: [AVD i dostęp root](https://developer.android.com/studio/run/managing-avds), [uruchamianie emulatora i writable-system](https://developer.android.com/studio/run/emulator-commandline).
+
 Wymagane lokalne SDK/JDK są takie jak w template: SDK 37, JDK 25, Gradle Wrapper 9.6.0. `local.properties` powinien wskazywać lokalne SDK. Minimalna wersja urządzenia: Android 10 / API 29.
 
 ```powershell

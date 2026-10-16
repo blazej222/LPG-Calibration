@@ -24,3 +24,16 @@ Currently I'm working on a better solution - a data logger application for eithe
 It would help with not having the need to drive around with a laptop in a car with OBS started and recording.
 
 As of now, I'm still decoding the communication protocol.
+
+## Starting emulator 
+
+To start android emulator, use 
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\AndroidDashboard\tools\start-com-usb-emulator.ps1
+```
+
+To stop android emulator, use
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File .\AndroidDashboard\tools\stop-com-usb-emulator.ps1
+```
+
