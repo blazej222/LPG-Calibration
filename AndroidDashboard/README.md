@@ -10,6 +10,8 @@ Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację
 4. Wybierz **Połącz** i zaakceptuj systemowe okno dostępu do USB. Inicjalizacja trwa kilka sekund; jej postęp jest widoczny.
 5. Wróć na **Dashboard**. Domyślny minimalny odstęp między odczytami to 200 ms. Ustawienia profilu czujników można zmieniać po rozłączeniu.
 
+W **Ustawienia → Wyświetlanie → Średnie czasy wtrysku** można zastąpić tabelę kanałów dwoma dużymi kafelkami: czasem wtrysku benzyny i gazu. Opcja jest zapamiętywana i można ją zmieniać podczas połączenia. Każda średnia obejmuje niezerowe czasy danego paliwa; gdy wszystkie są zerowe, wynosi 0,00 ms. To reguła prezentacji pomijająca puste kanały, a nie wykrywanie liczby cylindrów. Brak lub nieaktualność danych daje „—”.
+
 Wybrane VID/PID/port i ustawienia są zapamiętywane. Jeśli podłączono kilka identycznych adapterów, po ponownym wykryciu potrzebny jest jednoznaczny wybór. Nie ma automatycznego łączenia po podłączeniu kabla. Ekran pozostaje włączony podczas połączenia. Przejście aplikacji w tło zatrzymuje transmisję; obrót ekranu zachowuje sesję. Wróciwszy do aplikacji, wybierz **Połącz**.
 
 ## Przebieg komunikacji i źródła

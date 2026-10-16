@@ -73,10 +73,17 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
         item { MetricCard("Temperatura gazu", t?.gasTemperature, live, 1) }
         item { MetricCard("Napięcie · bajt 4*", t?.voltageCandidate, live, 2) }
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Card {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Czasy wtrysku · ms", style = MaterialTheme.typography.titleMedium)
-                    InjectionTable(t, live)
+            if (state.settings.averageInjectionTimes) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    AverageInjectionCard("Czas wtrysku benzyny", t?.petrol?.averageInjectionTimeMs(), live, Modifier.weight(1f))
+                    AverageInjectionCard("Czas wtrysku gazu", t?.gas?.averageInjectionTimeMs(), live, Modifier.weight(1f))
+                }
+            } else {
+                Card {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Czasy wtrysku · ms", style = MaterialTheme.typography.titleMedium)
+                        InjectionTable(t, live)
+                    }
                 }
             }
         }
@@ -98,6 +105,19 @@ private fun MetricCard(label: String, reading: Reading?, live: Boolean, decimals
                 fontWeight = FontWeight.SemiBold, color = if (live) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
             Text(reading?.unit ?: "", style = MaterialTheme.typography.bodyMedium)
             if (live && reading?.decoded == null) Text("RAW ${reading?.raw ?: "—"} · brak konfiguracji/źródła", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun AverageInjectionCard(label: String, averageMs: Double?, live: Boolean, modifier: Modifier = Modifier) {
+    Card(modifier.heightIn(min = 160.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = MaterialTheme.typography.titleMedium)
+            Text(if (live) averageMs.number(2) else "—", style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.SemiBold,
+                color = if (live) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("ms · średnia", style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -132,6 +152,11 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
     val settings = state.settings
     val enabled = !state.busy
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            Text("Wyświetlanie", style = MaterialTheme.typography.titleLarge)
+            SettingSwitch("Średnie czasy wtrysku", "Dwa duże kafelki zamiast tabeli kanałów. Średnia osobno dla benzyny i gazu, z pominięciem zerowych czasów; same zera dają 0,00 ms.",
+                settings.averageInjectionTimes, true, model::setAverageInjectionTimes)
+        }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Urządzenie USB", style = MaterialTheme.typography.titleLarge)

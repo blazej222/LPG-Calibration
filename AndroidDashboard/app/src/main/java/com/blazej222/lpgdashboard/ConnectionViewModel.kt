@@ -40,6 +40,7 @@ data class DashboardSettings(
     val pollIntervalMs: Long = 200,
     val assertControlLines: Boolean = true,
     val originalPolling: Boolean = false,
+    val averageInjectionTimes: Boolean = false,
 )
 
 enum class ConnectionPhase { DISCONNECTED, PERMISSION, CONNECTING, INITIALIZING, STREAMING, STOPPING, ERROR }
@@ -119,7 +120,8 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
                 preferences.getInt("analog", 0).takeIf { it in 1..6 },
                 preferences.getBoolean("thirdTemperature", false)),
             preferences.getLong("interval", 200).coerceIn(100, 2000),
-            preferences.getBoolean("controlLines", true), preferences.getBoolean("originalPolling", false))
+            preferences.getBoolean("controlLines", true), preferences.getBoolean("originalPolling", false),
+            averageInjectionTimes = preferences.getBoolean("averageInjectionTimes", false))
     }
 
     fun updateSettings(settings: DashboardSettings) {
@@ -129,8 +131,14 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
             .putInt("analog", settings.decoder.analogMode ?: 0)
             .putBoolean("thirdTemperature", settings.decoder.thirdTemperatureFromPayload)
             .putLong("interval", settings.pollIntervalMs).putBoolean("controlLines", settings.assertControlLines)
-            .putBoolean("originalPolling", settings.originalPolling).apply()
+            .putBoolean("originalPolling", settings.originalPolling)
+            .putBoolean("averageInjectionTimes", settings.averageInjectionTimes).apply()
         mutableState.update { it.copy(settings = settings, fresh = false) }
+    }
+
+    fun setAverageInjectionTimes(enabled: Boolean) {
+        preferences.edit().putBoolean("averageInjectionTimes", enabled).apply()
+        mutableState.update { it.copy(settings = it.settings.copy(averageInjectionTimes = enabled)) }
     }
 
     fun refreshDevices() {
