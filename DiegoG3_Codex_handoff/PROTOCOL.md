@@ -39,6 +39,12 @@ Ostatnie dwa pakiety (`40 0D`, `40 0F`) są **zrzutami emulatora**. W EXE warto�
 
 ## 2. Cała odpowiedź `0x0B`: struktura, indeksy, bitowość
 
+### Uzupełnienie transportu 2026-10-14 — lokalny trace i klient Android
+
+Lokalne `../GasECU Reverse Engineering/data/PORTMAN.LOG` i `DESKTOP-B2HLV5I-new3.LOG` pokazują 9600 8N1 oraz SET_DTR/SET_RTS **[M: pasywny trace]**, uzupełniając wcześniejszy dowód wyłącznie z emulatora. Start przed pierwszą ramką 0B w PORTMAN zawiera 77 żądań, w tym cztery `C2 01 01 6B 87` z timeoutami ok. 450 ms. Semantyka C2 pozostaje **[H]**. Długie wpisy logów mają często ucięty tekst HEX; deklarowany `Length` nie oznacza dostępności pełnej odpowiedzi do weryfikacji sumy.
+
+Klient Android w `../AndroidDashboard/` odtwarza ten konkretny start, serializuje request/reply i potem odczytuje głównie 0B. Warunkowo pobiera aktualne 0D/0F. Szczegóły źródeł, długości i różnic katalogu względem oryginalnego emulatora zapisano w `FINDINGS.md` oraz `../AndroidDashboard/README.md`. Nie zmienia to klasyfikacji pozostałych komend na read-only/mutation/unknown ani nie potwierdza znaczenia C2.
+
 **Zapytanie:** `C0 0B 0B D6`.
 
 **Przykład referencyjny**: payload z oryginalnego emulatora; ten sam payload bazowy zapisany w trzech CSV pomiarowych. Kolejne linie mają po 10 bajtów (offsety dziesiętne w nawiasach):

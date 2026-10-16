@@ -1,47 +1,48 @@
-package com.blazej222.lpgdashboard
+﻿package com.blazej222.lpgdashboard
 
+import android.content.Intent
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.core.content.FileProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.blazej222.lpgdashboard.ui.theme.LPGDashboardTheme
+import java.io.File
 
 class MainActivity : ComponentActivity() {
+    private var connection: ConnectionViewModel? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            LPGDashboardTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            val model: ConnectionViewModel = viewModel()
+            connection = model
+            val state by model.state.collectAsStateWithLifecycle()
+            DisposableEffect(state.busy) {
+                if (state.busy) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            }
+            LPGDashboardTheme(darkTheme = true, dynamicColor = false) {
+                DashboardApp(state, model, ::shareLog)
             }
         }
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    LPGDashboardTheme {
-        Greeting("Android")
+    override fun onStop() {
+        if (!isChangingConfigurations) connection?.disconnect("Odczyt zatrzymany · aplikacja w tle")
+        super.onStop()
+    }
+    private fun shareLog(file: File) {
+        val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }, "Zapisz lub udostępnij log komunikacji"))
     }
 }
