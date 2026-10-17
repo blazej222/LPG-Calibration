@@ -1,6 +1,6 @@
 # GAS ECU — dashboard Diego G3 dla Androida 10
 
-Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację sesji Diego G3 i cykliczny odczyt `C0 0B 0B D6`. Dashboard pokazuje RPM, temperatury reduktora/gazu, ciśnienie gazu, MAP, napięcie jako pole o niepotwierdzonej nazwie fizycznej, stan instalacji oraz czasy wtrysku. Protokół odczytuje 8+8 kanałów, a widok i średnie uwzględniają ręcznie wybraną liczbę wtryskiwaczy; zera nie oznaczają wykrycia liczby cylindrów.
+Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację sesji Diego G3 i cykliczny odczyt `C0 0B 0B D6`. Dashboard pokazuje RPM, temperatury reduktora/gazu, ciśnienie gazu, MAP, napięcie akumulatora (instalacji elektrycznej samochodu, potwierdzone przez użytkownika 2026-10-17), stan instalacji oraz czasy wtrysku. Protokół odczytuje 8+8 kanałów, a widok i średnie uwzględniają ręcznie wybraną liczbę wtryskiwaczy; zera nie oznaczają wykrycia liczby cylindrów.
 
 ## Uruchomienie na K706
 

@@ -76,7 +76,7 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
         item { MetricCard("Ciśnienie MAP", t?.mapPressure, live, 2) }
         item { MetricCard("Temperatura reduktora", t?.reducerTemperature, live, 1) }
         item { MetricCard("Temperatura gazu", t?.gasTemperature, live, 1) }
-        item { MetricCard("Napięcie · bajt 4*", t?.voltageCandidate, live, 2) }
+        item { MetricCard("Napięcie akumulatora", t?.batteryVoltage, live, 2) }
         item(span = { GridItemSpan(maxLineSpan) }) {
             if (state.settings.averageInjectionTimes) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -89,8 +89,7 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Text("Ramki: ${state.frames} · timeouty: ${state.timeouts} · błędne ramki: ${state.rejectedFrames}" +
-                (age?.let { " · ostatnia: %.1f s temu".format(Locale.getDefault(), it / 1000.0) } ?: "") +
-                "\n* Przelicznik napięcia potwierdzony; znaczenie jako napięcie zasilania pozostaje hipotezą.",
+                (age?.let { " · ostatnia: %.1f s temu".format(Locale.getDefault(), it / 1000.0) } ?: ""),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -264,7 +263,7 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
             Text("X = kod producenta, M = pomiary GUI, H = hipoteza, N = nieznane. Warianty warunkowe wymagają konfiguracji.", style = MaterialTheme.typography.bodySmall)
             state.telemetry?.let { t ->
                 for ((label, reading) in listOf("Poziom LPG" to t.levelRaw, "Analog" to t.analog,
-                    "Temperatura 3" to t.thirdTemperature, "Napięcie (hipoteza)" to t.voltageCandidate,
+                    "Temperatura 3" to t.thirdTemperature, "Napięcie akumulatora" to t.batteryVoltage,
                     "MAP" to t.mapPressure, "Ciśnienie gazu" to t.gasPressure)) {
                     Text("$label: RAW ${reading.raw} · ${reading.decoded.number(3)} ${reading.unit} · [${reading.confidence}] · ${reading.configMode ?: ""}",
                         style = MaterialTheme.typography.bodySmall)

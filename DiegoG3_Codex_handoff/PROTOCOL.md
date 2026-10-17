@@ -65,7 +65,7 @@ Klient Android w `../AndroidDashboard/` odtwarza ten konkretny start, serializuj
 | `1` | `79` | Ciśnienie gazu (bar), standardowa gałąź lub `FA..FF` → rejestry `0D/0F` | [X], standardowy wzór zgodny z wcześniejszymi pomiarami; aktywna gałąź zależy od konfiguracji |
 | `2` | `69` | Temperatura reduktora (°C), `LUT[raw]` | [X][M] |
 | `3` | `93` | Temperatura gazu (°C), ta sama LUT | [X], warto sprawdzić odrębnie wyświetlenie w GUI |
-| `4` | `9B` | Wartość napięciowa `5*raw/256/0.215` → ~14,08 V; prawdopodobnie zasilanie 12V | [X] wzór, **[H]** nazwa fizyczna |
+| `4` | `9B` | Napięcie instalacji elektrycznej samochodu (akumulatora), `5*raw/256/0.215` → ~14,08 V | [X] wzór; znaczenie fizyczne potwierdzone przez użytkownika 2026-10-17, zob. `FINDINGS.md` |
 | `5` | `6B` | Pole wykorzystywane przy wskaźniku poziomu LPG | [X] użycie, **[H]** jednostki/przekształcenie |
 | `6` | `17` | Sygnał analogowy, `raw*0.02 V` **w obsługiwanych trybach 1..6**; możliwa lambda | [X] zależność warunkowa, **[H]** interpretacja fizyczna |
 | `7–8` | `65 BA` | Słowo Big Endian `N`; `RPM=10*round(2_244_000/N)` | [X][M] 5/5 |
@@ -236,7 +236,7 @@ Czas bez znaczników: `time_ms = N / 187.0`; funkcja EXE `0x00563DEC`, stała `1
 
 ### 3.6 Napięcie i wejście analogowe
 
-- Bajt 4: `U=(raw*5/256)/0.215`, dla `9B` około `14.0807 V` [X] wzór; nazwa „napięcie akumulatora/zasilania” [H].
+- Bajt 4: `U=(raw*5/256)/0.215`, dla `9B` około `14.0807 V` [X] wzór; napięcie akumulatora/instalacji elektrycznej samochodu — potwierdzenie użytkownika z 2026-10-17, zob. `FINDINGS.md`.
 - Bajt 5: poziom LPG [H], aktywne GUI może wymagać typu czujnika i tabeli skalowania — **nie stosować dowolnej liniowej funkcji**.
 - Bajt 6: w pewnych trybach wejścia `U=raw*0.02 V`, dla `17` → `0.46 V` [X] warunkowy przelicznik; „lambda” [H]. Funkcja EXE `0x0057BEB0`.
 - Bajt 45: bitfield 8 bitów. GUI nie reagowało w danym układzie pomiarowym [M]. W EXE `0x00582570` występuje **bramka możliwości/wariant sterownika**. Bez potwierdzenia przejścia przez tę bramkę nie nazywać tych bitów stanami 8 wtryskiwaczy.

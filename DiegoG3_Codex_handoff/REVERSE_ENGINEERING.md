@@ -74,7 +74,7 @@ Uwaga: używaj offsetu z nagłówków PE aktualnej wersji; nie stosuj stale jedn
 | `0x00563EA0` | RPM | `10*round(2_244_000/N)`, specjalny przypadek N=0 | Stałe `187`, `1000`, `120`, `10` |
 | `0x00563950` | Ciśnienie gazu | tryb standardowy i gałąź RAW>=`FA` z rejestrami `0D/0F` | Wybór zależy od konfiguracji |
 | `0x00563BC8` | Ciśnienie MAP | dwa wzory skalowania zależne od typu czujnika | Badana konfiguracja używa `(x/256+0.00842)/0.242` |
-| `0x005638EC` | Sygnał napięciowy | `raw * 5/256 /0.215` | **[H]** fizyczna nazwa „zasilanie” |
+| `0x005638EC` | Napięcie instalacji elektrycznej samochodu | `raw * 5/256 /0.215` | [X] wzór; nazwa potwierdzona przez użytkownika 2026-10-17 (zob. `FINDINGS.md`) |
 | `0x0057BEB0` | Analog 6 | 0.02 V/LSB w wybranych konfiguracjach | **[H]** lambda |
 | `0x005826C2` | Dodatkowe temperatury | `payload[47]` do procedury temperatury przy spełnionej bramce | Fallback na alternatywny parametr `0x1B`, gdy bramka nieaktywna |
 | `0x00582570–0x005825F3` | Bajt 45 | osiem testów bitów i powiązanie z kontrolkami GUI | Źródło danych warunkowe, brak widocznego efektu w emulatorze |

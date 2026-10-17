@@ -2,6 +2,12 @@
 
 Zasady wpisu: `data, źródło ([X]/[M]/[E]/[H]), weryfikacja, VA/offset, wersja EXE, wniosek, test, następny krok`.
 
+## 2026-10-17 — Potwierdzenie znaczenia napięcia przez użytkownika
+
+- **Źródło: potwierdzenie użytkownika w rozmowie**, że odczyt jest napięciem instalacji elektrycznej samochodu. Dotyczy `payload[4]` komendy `0B`; wzór `raw * 5 / 256 / 0.215` pozostaje potwierdzony w EXE **[X]**, VA `0x005638EC`, wersja 3.0.8.2.
+- Użytkownik nie przekazał w tej wiadomości nowych par RAW/wskazanie, metody porównania ani pliku pomiarowego; nie oznaczamy tego jako nowy pomiar GUI **[M]** lub test emulatora **[E]**. Potwierdzenie zastępuje wcześniejszą hipotezę nazwy fizycznej tego pola.
+- Android pokazuje „Napięcie akumulatora”, bez dopisku „bajt 4”, oznaczenia hipotezy i przypisu pod dashboardem. Model używa nazwy `batteryVoltage`; RAW, źródło `0B[4]`, przelicznik i precyzja pozostają zachowane. Pozostałe pola **[H]/[N]** nie zmieniają statusu.
+
 ## 2026-10-14 — Stan początkowy
 
 Wszystkie badania ukończone przed przekazaniem znajdują się w `PROTOCOL.md` i `REVERSE_ENGINEERING.md`. Od tej chwili dodawaj tu tylko nowe dowody. Nie powtarzaj bez analizy starych hipotez.

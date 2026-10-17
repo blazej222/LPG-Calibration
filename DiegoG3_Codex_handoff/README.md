@@ -48,6 +48,7 @@ Ten handoff zawiera **emulator odpowiadający aplikacji PC**, lecz **nie zawiera
 - **EXE [X]:** LUT, parser `0B`, maski flag, `/187`, wzór RPM, skalowania ciśnienia/MAP, wybrane warunkowe ścieżki GUI.
 - **Eksperyment [M]:** RPM 5/5; mapa MAP 15/15; stany LPG 8/8; ikonka G 2/2; seria temperatur potwierdza LUT.
 - **Emulator [E]:** 83 requesty + statyczne payloady, port COM18, 9600, checksum TX/RX.
-- **Hipotezy [H]/nieznane [N]:** bezpieczność i znaczenie większości komend, poziom LPG, pełna semantyka 45 i 42–49, fizyczne nazwy 4/6/47 i inne wersje konfiguracji.
+- **Potwierdzenie użytkownika 2026-10-17:** bajt 4 to napięcie instalacji elektrycznej samochodu (akumulatora); szczegóły w `FINDINGS.md`.
+- **Hipotezy [H]/nieznane [N]:** bezpieczność i znaczenie większości komend, poziom LPG, pełna semantyka 45 i 42–49, fizyczne nazwy 6/47 i inne wersje konfiguracji.
 
 **Ważne:** wszystkie długie odpowiedzi w JSON pochodzą z ręcznej transkrypcji wklejonego kodu emulatora, nie z lokalnego pliku źródłowego. Jeśli posiadasz w swoim projekcie oryginalny `emulator.py`, zrób z nim porównanie bajt po bajcie przed wykorzystaniem całego katalogu w aplikacji produkcyjnej.

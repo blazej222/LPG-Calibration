@@ -29,7 +29,7 @@ data class Telemetry(
     val gasTemperature: Reading,
     val gasPressure: Reading,
     val mapPressure: Reading,
-    val voltageCandidate: Reading,
+    val batteryVoltage: Reading,
     val levelRaw: Reading,
     val analog: Reading,
     val thirdTemperature: Reading,
@@ -94,7 +94,7 @@ object DiegoProtocol {
                 source = if (raw[1] >= 0xFA && config.gasPressureMode == GasPressureMode.REGISTER_FALLBACK)
                     "0B[1], 40/0D=${r0d ?: "?"}, 40/0F=${r0f ?: "?"}" else "0B[1]"),
             field(41, map, "bar", if (config.mapMode == MapMode.OBSERVED) "X/M" else "X", config.mapMode.name),
-            field(4, raw[4] * 5.0 / 256.0 / 0.215, "V", "X; nazwa H"),
+            field(4, raw[4] * 5.0 / 256.0 / 0.215, "V", "X; potwierdzone przez użytkownika"),
             field(5, null, "RAW", "N"),
             field(6, if (config.analogMode in 1..6) raw[6] * 0.02 else null, "V", "X warunkowe; nazwa H", config.analogMode?.toString()),
             field(47, if (config.thirdTemperatureFromPayload) temperatures[raw[47]] else null, "°C", "X warunkowe; nazwa H",
