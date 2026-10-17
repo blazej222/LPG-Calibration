@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fit the supplied artwork into the adaptive icon's visible area. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="16.666667%"
+    android:insetTop="16.666667%"
+    android:insetRight="16.666667%"
+    android:insetBottom="16.666667%">
+    <bitmap
+        android:src="@drawable/ic_launcher_artwork"
+        android:gravity="fill"
+        android:filter="true" />
+</inset>

@@ -3,6 +3,7 @@ workspace.xml
 tasks.xml
 #data/
 *.png
+!AndroidDashboard/app/src/main/res/drawable-nodpi/ic_launcher_artwork.png
 __pycache__
 .idea/
 .venv
