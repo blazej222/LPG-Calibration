@@ -14,6 +14,8 @@ W **Ustawienia → Wyświetlanie** opcja **Średnie czasy wtrysku** jest domyśl
 
 Wybrane VID/PID/port i ustawienia są zapamiętywane. Jeśli podłączono kilka identycznych adapterów, po ponownym wykryciu potrzebny jest jednoznaczny wybór. Nie ma automatycznego łączenia po podłączeniu kabla. Ekran pozostaje włączony podczas połączenia. Przejście aplikacji w tło zatrzymuje transmisję; obrót ekranu zachowuje sesję. Wróciwszy do aplikacji, wybierz **Połącz**.
 
+Stan instalacji jest wyświetlany w prostokącie: **BENZYNA** (kody 3/6/7) i **CZEKAM** (4) na czerwono, **ZAPŁON** (1/2) na szaro, **LPG** (5) na zielono. Wyłączenie (0), brak danych i dane nieaktualne mają szare tło. Surowy kod stanu pozostaje dostępny w diagnostyce.
+
 ## Przebieg komunikacji i źródła
 
 - **Transport:** 9600, 8 bitów danych, brak parzystości, 1 stop bit; DTR/RTS domyślnie włączone. Te ustawienia występują w `../GasECU Reverse Engineering/data/PORTMAN.LOG`, wpisy 10–15. Nie włączamy RTS/CTS ani XON/XOFF. Sterownik USB pochodzi z [usb-serial-for-android 3.11.0](https://github.com/mik3y/usb-serial-for-android/tree/3.11.0).

@@ -7,10 +7,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -61,10 +64,11 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
     LazyVerticalGrid(columns = GridCells.Fixed(columns),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(if (live) "● NA ŻYWO" else if (t != null) "● DANE NIEAKTUALNE" else "● BRAK DANYCH",
-                    color = if (live) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${t?.stateLabel ?: "—"} · stan ${t?.stateCode ?: "—"}", style = MaterialTheme.typography.titleMedium)
+                    color = if (live) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f).padding(end = 12.dp))
+                InstallationStateBadge(t?.stateCode, live)
             }
         }
         item { MetricCard("Obroty silnika", t?.rpm, live, 0) }
@@ -88,6 +92,31 @@ private fun LiveDashboard(state: DashboardState, live: Boolean, age: Long?) {
                 (age?.let { " · ostatnia: %.1f s temu".format(Locale.getDefault(), it / 1000.0) } ?: "") +
                 "\n* Przelicznik napięcia potwierdzony; znaczenie jako napięcie zasilania pozostaje hipotezą.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun InstallationStateBadge(stateCode: Int?, live: Boolean) {
+    val gray = Color(0xFF52525B)
+    val red = Color(0xFFB91C1C)
+    val green = Color(0xFF15803D)
+    val (label, background) = when {
+        stateCode == null -> "BRAK DANYCH" to gray
+        !live -> "DANE NIEAKTUALNE" to gray
+        else -> when (stateCode) {
+            0 -> "WYŁĄCZONY" to gray
+            1, 2 -> "ZAPŁON" to gray
+            3, 6, 7 -> "BENZYNA" to red
+            4 -> "CZEKAM" to red
+            5 -> "LPG" to green
+            else -> "NIEZNANY" to gray
+        }
+    }
+    Surface(color = background, contentColor = Color.White, shape = RoundedCornerShape(4.dp)) {
+        Box(Modifier.widthIn(min = 148.dp).heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center) {
+            Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         }
     }
 }
