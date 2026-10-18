@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.net.Uri
 import android.os.SystemClock
 import android.os.Build
 import androidx.core.content.ContextCompat
@@ -21,6 +22,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -60,6 +63,9 @@ data class DashboardState(
     val firmware: String = "",
     val trace: List<String> = emptyList(),
     val logFile: File? = null,
+    val recording: RecordingSettings = RecordingSettings(),
+    val recordingStatus: RecordingStatus = RecordingStatus(),
+    val choosingRecordingDirectory: Boolean = false,
 ) {
     val busy: Boolean get() = phase in listOf(ConnectionPhase.PERMISSION, ConnectionPhase.CONNECTING,
         ConnectionPhase.INITIALIZING, ConnectionPhase.STREAMING, ConnectionPhase.STOPPING)
@@ -69,8 +75,16 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
     private val context = application.applicationContext
     private val usb = context.getSystemService(Context.USB_SERVICE) as UsbManager
     private val preferences = context.getSharedPreferences("dashboard", Context.MODE_PRIVATE)
-    private val mutableState = MutableStateFlow(DashboardState(settings = loadSettings()))
+    private val mutableState = MutableStateFlow(DashboardState(settings = loadSettings(), recording = RecordingSettings(
+        enabled = preferences.getBoolean("recordingEnabled", false),
+        directoryUri = preferences.getString("recordingDirectory", null),
+        directoryLabel = preferences.getString("recordingDirectoryLabel", "") ?: "",
+    )))
     val state = mutableState.asStateFlow()
+    private val csvStore = CsvDocumentStore(context.contentResolver)
+    private val recordingMutex = Mutex()
+    private var csvDocument: CsvDocument? = null
+    private var csvSequence: Long = -1
     private var sessionJob: Job? = null
     private var pendingChoice: UsbChoice? = null
     private val permissionAction = "${context.packageName}.USB_PERMISSION"
@@ -150,6 +164,90 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
         mutableState.update { it.copy(settings = it.settings.copy(injectorCount = count)) }
     }
 
+    fun setRecordingEnabled(enabled: Boolean) {
+        if (enabled && state.value.recording.directoryUri == null) {
+            recordingPickerFailed("Najpierw wybierz folder zapisu CSV")
+            return
+        }
+        preferences.edit().putBoolean("recordingEnabled", enabled).apply()
+        mutableState.update { it.copy(recording = it.recording.copy(enabled = enabled, sequence = it.recording.sequence + 1),
+            recordingStatus = it.recordingStatus.copy(error = null)) }
+        if (!enabled) viewModelScope.launch(Dispatchers.IO) {
+            recordingMutex.withLock {
+                if (!state.value.recording.enabled || csvSequence != state.value.recording.sequence) closeCsvLocked()
+            }
+        }
+    }
+
+    fun selectRecordingDirectory(uri: Uri) {
+        if (state.value.busy || state.value.choosingRecordingDirectory) return
+        mutableState.update { it.copy(choosingRecordingDirectory = true) }
+        viewModelScope.launch {
+            try {
+                val label = withContext(Dispatchers.IO) { csvStore.selectDirectory(uri) }
+                val previous = state.value.recording.directoryUri
+                preferences.edit().putString("recordingDirectory", uri.toString())
+                    .putString("recordingDirectoryLabel", label).apply()
+                mutableState.update { it.copy(recording = it.recording.copy(directoryUri = uri.toString(), directoryLabel = label),
+                    recordingStatus = RecordingStatus()) }
+                if (previous != null && previous != uri.toString()) {
+                    withContext(Dispatchers.IO) { runCatching { csvStore.releaseDirectory(previous) } }
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) { recordingPickerFailed("Nie można wybrać folderu: ${e.message ?: e.javaClass.simpleName}") }
+            finally { mutableState.update { it.copy(choosingRecordingDirectory = false) } }
+        }
+    }
+
+    fun recordingPickerFailed(message: String) {
+        mutableState.update { it.copy(recordingStatus = it.recordingStatus.copy(error = message)) }
+    }
+
+    internal suspend fun recordTelemetry(sample: CsvSample) = withContext(Dispatchers.IO) {
+        recordingMutex.withLock {
+            val config = state.value.recording
+            if (!config.enabled) {
+                closeCsvLocked()
+                return@withLock
+            }
+            try {
+                if (csvDocument != null && csvSequence != config.sequence && !closeCsvLocked()) return@withLock
+                val directory = config.directoryUri ?: throw IOException("Wybierz folder zapisu CSV")
+                val document = csvDocument ?: csvStore.create(directory, sample.timestampMs, sample.elapsedRealtimeMs).also {
+                    csvDocument = it
+                    csvSequence = config.sequence
+                    mutableState.update { current -> current.copy(recordingStatus = RecordingStatus(active = true, fileName = it.name)) }
+                }
+                document.csv.append(sample)
+                mutableState.update { it.copy(recordingStatus = it.recordingStatus.copy(rows = document.csv.rows)) }
+            } catch (e: CancellationException) { throw e }
+            catch (e: Exception) {
+                closeCsvLocked()
+                recordingFailed("Zapis CSV zatrzymany: ${e.message ?: e.javaClass.simpleName}. Sprawdź folder i wolne miejsce.")
+            }
+        }
+    }
+
+    private fun recordingFailed(message: String) {
+        preferences.edit().putBoolean("recordingEnabled", false).apply()
+        mutableState.update { it.copy(recording = it.recording.copy(enabled = false),
+            recordingStatus = it.recordingStatus.copy(active = false, error = message)) }
+    }
+
+    // Only called with recordingMutex held; closing never runs on the UI thread.
+    private fun closeCsvLocked(): Boolean {
+        val document = csvDocument ?: return true
+        csvDocument = null
+        var closed = true
+        try { document.csv.close() }
+        catch (e: Exception) {
+            closed = false
+            recordingFailed("Nie udało się zamknąć pliku CSV: ${e.message ?: e.javaClass.simpleName}")
+        }
+        mutableState.update { it.copy(recordingStatus = it.recordingStatus.copy(active = false)) }
+        return closed
+    }
+
     fun refreshDevices() {
         val choices = usb.deviceList.values.sortedBy { it.deviceName }.flatMap { device ->
             val driver = UsbSerialProber.getDefaultProber().probeDevice(device)
@@ -171,7 +269,7 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun connect() {
-        if (state.value.busy || sessionJob != null) return
+        if (state.value.busy || sessionJob != null || state.value.choosingRecordingDirectory) return
         refreshDevices()
         val choice = state.value.devices.find { it.key == state.value.selectedKey && it.portIndex != null }
             ?: return fail("Wybierz obsługiwany port USB w ustawieniach")
@@ -285,9 +383,14 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
                     }
                     coroutine.ensureActive()
                     val decoded = DiegoProtocol.decode(payload, TemperatureTable.values, settings.decoder, r0d, r0f)
+                    val timestampMs = System.currentTimeMillis()
+                    val receivedMs = SystemClock.elapsedRealtime()
                     mutableState.update { it.copy(phase = ConnectionPhase.STREAMING, message = "Odczyt na żywo · USB · 9600 8N1",
-                        telemetry = decoded, fresh = true, lastFrameMs = SystemClock.elapsedRealtime(), frames = it.frames + 1,
+                        telemetry = decoded, fresh = true, lastFrameMs = receivedMs, frames = it.frames + 1,
                         rejectedFrames = session.rejectedFrames) }
+                    val snapshot = state.value
+                    recordTelemetry(CsvSample(decoded, timestampMs, receivedMs, snapshot.frames,
+                        snapshot.settings.injectorCount, settings.decoder, snapshot.timeouts, snapshot.rejectedFrames, snapshot.firmware))
                     if (settings.originalPolling) {
                         // Remaining captured cyclic queries are only consumed; dashboard values come from 0B.
                         for (command in listOf(
@@ -311,6 +414,7 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
                 delay((settings.pollIntervalMs - (SystemClock.elapsedRealtime() - start)).coerceAtLeast(10))
             }
         } finally {
+            withContext(NonCancellable + Dispatchers.IO) { recordingMutex.withLock { closeCsvLocked() } }
             runCatching { writer?.close() }
             runCatching { port.close() }
             connection.close()

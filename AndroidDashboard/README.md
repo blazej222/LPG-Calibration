@@ -36,11 +36,23 @@ Implementacja przenosi potwierdzone algorytmy z `../DiegoG3_Codex_handoff/src/di
 - Wtryski: BE `/187.0`; maski tylko dla benzyny 1 (`1FFF`) i 2 (`7FFF`).
 - Stan: osiem osobnych kodów; flaga czerwonej ikony G osobno.
 - Profil domyślny: MAP „Z pomiarów” oraz ciśnienie „FA → 0D/0F”, odpowiadające instalacji z handoffu. To **jawny wybór profilu**, nie automatyczny odczyt konfiguracji ECU. „Nieznany” wyłącza przeliczanie danego ciśnienia; alternatywny MAP pochodzi z EXE, bez pomiarowego potwierdzenia tego wariantu.
-- Poziom gazu: RAW, bez wymyślonych procentów. Analog i dodatkowa temperatura domyślnie RAW, z opcją jawnego wskazania gałęzi. Nazwy fizyczne bajtów 4/6/47 pozostają hipotezami. Pola 42–46 i 48–49 są dostępne jako RAW w diagnostyce.
+- Poziom gazu: RAW, bez wymyślonych procentów. Analog i dodatkowa temperatura domyślnie RAW, z opcją jawnego wskazania gałęzi. Nazwy fizyczne bajtów 6/47 pozostają hipotezami; bajt 4 to potwierdzone przez użytkownika napięcie instalacji elektrycznej. Pola 42–46 i 48–49 są dostępne jako RAW w diagnostyce.
 
 Modele `Reading` zachowują `raw`, `decoded`, `unit`, `confidence`, `configMode`, `source`; pełny payload pozostaje w `Telemetry`. Dokładne wartości nie są zaokrąglane przed UI. Po timeoutach lub rozłączeniu dashboard pokazuje kreski i „DANE NIEAKTUALNE”; ostatni payload w diagnostyce pozostaje dostępny do analizy.
 
 ## Logi i sprawdzenie ze sprzętem
+
+### Rejestrowanie jazdy do CSV
+
+W **Ustawienia → Rejestrowanie jazdy** wybierz **Wybierz folder zapisu**, wskaż folder w pamięci radia lub na nośniku udostępnianym przez system, zaakceptuj dostęp i włącz **Rejestruj dane do CSV**. Folder i przełącznik są zapamiętywane. Wybór korzysta z systemowego [Storage Access Framework](https://developer.android.com/training/data-storage/shared/documents-files), bez szerokich uprawnień do pamięci. Folder można zmienić po rozłączeniu; sam zapis można włączać i wyłączać podczas odczytu.
+
+- Nowy plik `gas-ecu-YYYYMMDD-HHmmss-SSS-ID.csv` powstaje przy pierwszej poprawnej próbce po połączeniu lub ponownym włączeniu zapisu; data w nazwie jest w UTC. Istniejące pliki nie są nadpisywane ani automatycznie usuwane.
+- Każda poprawna ramka 0B tworzy jeden wiersz. CSV zawiera datę/czas UTC, czas monotoniczny od początku pliku w ms, numer ramki, RPM, ciśnienia, temperatury, napięcie akumulatora, kod i opis stanu, liczbę wtryskiwaczy, średnie i oddzielne czasy benzyny/gazu dla skonfigurowanych kanałów. Ukryte kanały mają puste pola; pełne 50 bajtów payloadu pozostaje w `payload_0b_hex`. Zapis obejmuje także RAW poziomu LPG/analogu/temperatury 3, warunkowo przeliczone odczyty, kontekst konfiguracji i pewności, flagę G, liczniki błędów oraz firmware.
+- Format: **UTF-8 z BOM, separator `;`, kropka dziesiętna**, jednostki w nazwach kolumn, brak zaokrąglania do precyzji ekranu. Pola nieznane są puste, prawdziwe zera pozostają zerami. W Excelu można użyć importu danych z tekstu/CSV; w Pythonie `pandas.read_csv(path, sep=";")`. Zmiana liczby wtryskiwaczy nie zmienia schematu kolumn, jest zapisana w każdym wierszu.
+- Zapis działa podczas aktywnego odczytu **z aplikacją na ekranie**. Wyłączenie przełącznika, rozłączenie, odpięcie USB, błąd sesji i przejście aplikacji w tło zamykają plik. Nie zapisuje się ponownie starych odczytów podczas timeoutów. Ponowne połączenie przy włączonej opcji tworzy kolejny plik. To nie jest usługa rejestrująca w tle.
+- Każda próbka jest zapisywana i opróżniana z bufora na wątku I/O. Stan zapisu, nazwa pliku i liczba próbek są widoczne w aplikacji. Błąd zapisu (np. utrata dostępu lub brak miejsca) wyłącza rejestrację i pokazuje komunikat; odczyt ECU działa dalej. Po naprawieniu przyczyny można włączyć zapis ponownie.
+
+### Diagnostyka TX/RX
 
 Ustawienia zawierają ostatnie fragmenty TX/RX i przycisk **Udostępnij log TX/RX**. Pliki są prywatne dla aplikacji, maks. 4 MiB na sesję, ostatnie pięć sesji. Log zapisuje czas monotoniczny, kierunek i wszystkie odebrane fragmenty, także złą sumę. Limit zapisu nie zatrzymuje odczytu ECU.
 
@@ -104,6 +116,14 @@ cd AndroidDashboard
 
 `DiegoProtocolTest` sprawdza komplet pomiarów CSV, LUT, maski, gałęzie ciśnienia, unknown modes, fragmentację, sumy, odzyskiwanie synchronizacji, timeouty i cały start na odpowiedziach historycznego emulatora. Oryginalne fixture'y nie są modyfikowane.
 
+`TelemetryCsvTest` sprawdza schemat CSV, pełną precyzję, zmianę liczby kanałów, brakujące odczyty, niezależność od języka telefonu, escapowanie tekstu i błędy zapisu. `CsvRecordingStorageTest` sprawdza wycofanie zapisu po utracie uprawnień. Jego dodatkowy test rzeczywistego folderu SAF uruchamia się po wskazaniu folderu w aplikacji, przekazując parametr `csvTestDirectoryUri` do runnera:
+
+```powershell
+adb shell am instrument -w -e csvTestDirectoryUri "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FGasEcuCsvTest" com.blazej222.lpgdashboard.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+URI musi odpowiadać folderowi zatwierdzonemu w systemowym oknie na danym emulatorze/urządzeniu. Test pozostawia trzy własne pliki CSV z próbkami fixture'u; bez argumentu test folderu jest pomijany. Nie otwiera portu ECU.
+
 Ponowne wygenerowanie LUT, sekwencji i kopii fixture'ów z oryginalnych danych:
 
 ```powershell
@@ -119,3 +139,10 @@ Generator sprawdza również długości startowych odpowiedzi względem oryginal
 - Referencyjne testy Python handoffu: 19 przypadków, 18 OK, 1 pominięty z powodu braku opcjonalnego EXE.
 - **Lint nie został ukończony:** pobieranie `intellij-core-32.4.1.jar` i `kotlin-compiler-32.4.1.jar` z `dl.google.com` kończyło się timeoutami. Ponowienie zatrzymano po kolejnym braku postępu pobierania. Nie jest to wynik analizy lintu; kontrolę trzeba powtórzyć po udostępnieniu tych zależności.
 - Nie testowano fizycznego kabla, okna zgody USB na K706 ani odpowiedzi rzeczywistego ECU. Przeniesione przeliczniki mają dowody [X/M] opisane powyżej; skuteczność odtwarzanej inicjalizacji na danym urządzeniu wymaga sprawdzenia ze sprzętem.
+
+## Weryfikacja rejestracji CSV — 2026-10-17
+
+- Kompilacja debug APK i **26 testów jednostkowych** zakończone poprawnie, w tym 5 testów nowego formatu CSV.
+- **5/5 testów instrumentacyjnych** na tymczasowym AVD API 36: dashboard i ustawienia, zapis do folderu SAF zatwierdzonego w systemowym oknie, zamknięcie pliku i wznowienie (także szybkie wyłączenie/włączenie), odtworzenie ustawień oraz obsługa brakującego uprawnienia bez zmiany fazy połączenia.
+- Wskazano `Documents/GasEcuCsvTest`. Utworzono trzy różne pliki z 2, 1 i 1 próbkami fixture'u. Po pobraniu niezależnie odczytano je Pythonowym `csv.DictReader`: 48 kolumn, prawidłowe liczby i surowy payload długości 50 bajtów. Artefakty lokalnie w `build/csv-ui-check/`.
+- Test zapisu używa zdekodowanego fixture'u i rzeczywistego dostawcy dokumentów Androida; nie otwiera portu fizycznego ECU.

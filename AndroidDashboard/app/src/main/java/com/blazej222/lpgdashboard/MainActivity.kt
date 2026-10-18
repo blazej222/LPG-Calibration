@@ -6,6 +6,7 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.core.content.FileProvider
@@ -16,6 +17,9 @@ import java.io.File
 
 class MainActivity : ComponentActivity() {
     private var connection: ConnectionViewModel? = null
+    private val recordingDirectoryPicker = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) connection?.selectRecordingDirectory(uri)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -29,12 +33,24 @@ class MainActivity : ComponentActivity() {
                 onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
             }
             LPGDashboardTheme(darkTheme = true, dynamicColor = false) {
-                DashboardApp(state, model, ::shareLog)
+                DashboardApp(state, model, ::shareLog, ::chooseRecordingDirectory)
             }
         }
     }
+    private fun chooseRecordingDirectory() {
+        val model = connection ?: return
+        if (model.state.value.busy || model.state.value.choosingRecordingDirectory) return
+        try {
+            recordingDirectoryPicker.launch(model.state.value.recording.directoryUri?.let(android.net.Uri::parse))
+        } catch (e: Exception) {
+            model.recordingPickerFailed("Nie można otworzyć wyboru folderu: ${e.message ?: e.javaClass.simpleName}")
+        }
+    }
+
     override fun onStop() {
-        if (!isChangingConfigurations) connection?.disconnect("Odczyt zatrzymany · aplikacja w tle")
+        if (!isChangingConfigurations && connection?.state?.value?.busy == true) {
+            connection?.disconnect("Odczyt zatrzymany · aplikacja w tle")
+        }
         super.onStop()
     }
     private fun shareLog(file: File) {

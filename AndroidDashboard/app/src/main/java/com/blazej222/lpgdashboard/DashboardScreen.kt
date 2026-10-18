@@ -24,7 +24,7 @@ import java.io.File
 import java.util.Locale
 
 @Composable
-fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit) {
+fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit, chooseRecordingDirectory: () -> Unit) {
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(Unit) { while (true) { delay(500); now = SystemClock.elapsedRealtime() } }
@@ -40,7 +40,7 @@ fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (F
                 OutlinedButton(onClick = { settingsOpen = !settingsOpen }) { Text(if (settingsOpen) "Dashboard" else "Ustawienia") }
                 Spacer(Modifier.width(8.dp))
                 Button(onClick = { if (state.busy) model.disconnect() else model.connect() },
-                    enabled = state.phase != ConnectionPhase.STOPPING) {
+                    enabled = state.phase != ConnectionPhase.STOPPING && !state.choosingRecordingDirectory) {
                     Text(if (state.busy) "Rozłącz" else "Połącz")
                 }
             }
@@ -49,7 +49,10 @@ fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (F
                 live -> MaterialTheme.colorScheme.primary
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(vertical = 8.dp))
-            if (settingsOpen) SettingsScreen(state, model, shareLog)
+            if (state.recording.enabled || state.recordingStatus.fileName != null || state.recordingStatus.error != null) {
+                RecordingStatusText(state)
+            }
+            if (settingsOpen) SettingsScreen(state, model, shareLog, chooseRecordingDirectory)
             else LiveDashboard(state, live, age)
         }
     }
@@ -190,7 +193,7 @@ private fun InjectionValue(label: String, timeMs: Double?, live: Boolean, gas: B
 }
 
 @Composable
-private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit) {
+private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit, chooseRecordingDirectory: () -> Unit) {
     val settings = state.settings
     val enabled = !state.busy
     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -204,6 +207,19 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
                 settings.injectorCount, true, model::setInjectorCount)
             Text("Domyślnie 4. Dotyczy obu paliw: widoczne są kanały 1–${settings.injectorCount} i tylko one wchodzą do średnich. Zmiana nie wymaga rozłączenia.",
                 style = MaterialTheme.typography.bodySmall)
+        }
+        item {
+            Text("Rejestrowanie jazdy", style = MaterialTheme.typography.titleLarge)
+            SettingSwitch("Rejestruj dane do CSV", "Zapisuj każdy nowy odczyt: czas, parametry instalacji, średnie i czasy poszczególnych wtryskiwaczy.",
+                state.recording.enabled, state.recording.directoryUri != null && !state.choosingRecordingDirectory,
+                model::setRecordingEnabled)
+            Text("Folder: ${state.recording.directoryLabel.ifEmpty { "nie wybrano" }}")
+            OutlinedButton(onClick = chooseRecordingDirectory, enabled = !state.busy && !state.choosingRecordingDirectory) {
+                Text(if (state.choosingRecordingDirectory) "Sprawdzanie folderu…" else "Wybierz folder zapisu")
+            }
+            Text("Folder można zmienić po rozłączeniu. Rejestracja działa podczas odczytu, gdy aplikacja jest na ekranie. Każde rozpoczęcie zapisu tworzy nowy plik.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            RecordingStatusText(state)
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -282,6 +298,22 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
             Text(state.trace.joinToString("\n"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
         }
     }
+}
+
+@Composable
+private fun RecordingStatusText(state: DashboardState) {
+    val status = state.recordingStatus
+    val message = when {
+        status.error != null -> "CSV: ${status.error}"
+        status.active && !state.recording.enabled -> "CSV: kończenie zapisu…"
+        status.active -> "● CSV: ${status.fileName} · próbek: ${status.rows}"
+        state.recording.enabled -> "CSV: oczekiwanie na nowe dane"
+        status.fileName != null -> "CSV: zakończono ${status.fileName} · próbek: ${status.rows}"
+        else -> "CSV: rejestracja wyłączona"
+    }
+    Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp),
+        color = if (status.error != null) MaterialTheme.colorScheme.error
+            else if (status.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
