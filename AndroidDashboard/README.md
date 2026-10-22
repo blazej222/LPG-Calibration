@@ -12,7 +12,9 @@ Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację
 
 W **Ustawienia → Wyświetlanie** opcja **Średnie czasy wtrysku** jest domyślnie włączona przy nowej instalacji. Pokazuje dwa duże kafelki: czas wtrysku benzyny i gazu. Wcześniej zapisany wybór pozostaje zachowany. **Liczba zainstalowanych wtryskiwaczy** pozwala wybrać 1–8 (domyślnie 4), wspólnie dla obu paliw. Średnia obejmuje wyłącznie pierwsze N kanałów, także te z czasem 0,00 ms. Po wyłączeniu średnich każdy wybrany kanał ma osobny duży kafelek z czasem benzyny i gazu; szerokość kafelków i liczba kolumn dopasowują się do dostępnego miejsca. Oba ustawienia są zapamiętywane i dostępne podczas połączenia. Brak lub nieaktualność danych daje „—”.
 
-Wybrane VID/PID/port i ustawienia są zapamiętywane. Jeśli podłączono kilka identycznych adapterów, po ponownym wykryciu potrzebny jest jednoznaczny wybór. Nie ma automatycznego łączenia po podłączeniu kabla. Ekran pozostaje włączony podczas połączenia. Przejście aplikacji w tło zatrzymuje transmisję; obrót ekranu zachowuje sesję. Wróciwszy do aplikacji, wybierz **Połącz**.
+Wybrane VID/PID/port i ustawienia są zapamiętywane. Jeśli podłączono kilka identycznych adapterów, po ponownym wykryciu potrzebny jest jednoznaczny wybór. Nie ma automatycznego łączenia po podłączeniu kabla. Ekran dashboardu pozostaje włączony podczas połączenia. **Przełączenie na inną aplikację, wygaszenie ekranu, obrót i zamknięcie ekranu dashboardu nie przerywają odczytu ani zapisu CSV.** Powrót do aplikacji pokazuje tę samą sesję i plik. Połączenie można zakończyć przyciskiem **Rozłącz** w aplikacji lub powiadomieniu.
+
+Po zgodzie USB połączeniem zarządza usługa pierwszoplanowa typu [`connectedDevice`](https://developer.android.com/develop/background-work/services/fgs/service-types#connected-device), z powiadomieniem i blokadą uśpienia CPU zwalnianą przy zakończeniu sesji. Android 13+ przy pierwszym łączeniu pyta o możliwość wyświetlania powiadomień; odmowa nie blokuje połączenia. Usługa nie jest uruchamiana przy starcie radia i nie wznawia samodzielnie sesji po wymuszonym zatrzymaniu aplikacji.
 
 Stan instalacji jest wyświetlany w prostokącie: **BENZYNA** (kody 3/6/7) i **CZEKAM** (4) na czerwono, **ZAPŁON** (1/2) na szaro, **LPG** (5) na zielono. Wyłączenie (0), brak danych i dane nieaktualne mają szare tło. Surowy kod stanu pozostaje dostępny w diagnostyce.
 
@@ -49,7 +51,7 @@ W **Ustawienia → Rejestrowanie jazdy** wybierz **Wybierz folder zapisu**, wska
 - Nowy plik `gas-ecu-YYYYMMDD-HHmmss-SSS-ID.csv` powstaje przy pierwszej poprawnej próbce po połączeniu lub ponownym włączeniu zapisu; data w nazwie jest w UTC. Istniejące pliki nie są nadpisywane ani automatycznie usuwane.
 - Każda poprawna ramka 0B tworzy jeden wiersz. CSV zawiera datę/czas UTC, czas monotoniczny od początku pliku w ms, numer ramki, RPM, ciśnienia, temperatury, napięcie akumulatora, kod i opis stanu, liczbę wtryskiwaczy, średnie i oddzielne czasy benzyny/gazu dla skonfigurowanych kanałów. Ukryte kanały mają puste pola; pełne 50 bajtów payloadu pozostaje w `payload_0b_hex`. Zapis obejmuje także RAW poziomu LPG/analogu/temperatury 3, warunkowo przeliczone odczyty, kontekst konfiguracji i pewności, flagę G, liczniki błędów oraz firmware.
 - Format: **UTF-8 z BOM, separator `;`, kropka dziesiętna**, jednostki w nazwach kolumn, brak zaokrąglania do precyzji ekranu. Pola nieznane są puste, prawdziwe zera pozostają zerami. W Excelu można użyć importu danych z tekstu/CSV; w Pythonie `pandas.read_csv(path, sep=";")`. Zmiana liczby wtryskiwaczy nie zmienia schematu kolumn, jest zapisana w każdym wierszu.
-- Zapis działa podczas aktywnego odczytu **z aplikacją na ekranie**. Wyłączenie przełącznika, rozłączenie, odpięcie USB, błąd sesji i przejście aplikacji w tło zamykają plik. Nie zapisuje się ponownie starych odczytów podczas timeoutów. Ponowne połączenie przy włączonej opcji tworzy kolejny plik. To nie jest usługa rejestrująca w tle.
+- Zapis działa podczas aktywnego odczytu **również w tle i przy wyłączonym ekranie**. Przełączanie aplikacji i odtworzenie dashboardu nie tworzą nowego pliku. Wyłączenie przełącznika, rozłączenie, odpięcie USB lub błąd sesji zamykają plik. Nie zapisuje się ponownie starych odczytów podczas timeoutów. Ponowne połączenie przy włączonej opcji tworzy kolejny plik.
 - Każda próbka jest zapisywana i opróżniana z bufora na wątku I/O. Stan zapisu, nazwa pliku i liczba próbek są widoczne w aplikacji. Błąd zapisu (np. utrata dostępu lub brak miejsca) wyłącza rejestrację i pokazuje komunikat; odczyt ECU działa dalej. Po naprawieniu przyczyny można włączyć zapis ponownie.
 
 ### Diagnostyka TX/RX
@@ -124,6 +126,8 @@ adb shell am instrument -w -e csvTestDirectoryUri "content://com.android.externa
 
 URI musi odpowiadać folderowi zatwierdzonemu w systemowym oknie na danym emulatorze/urządzeniu. Test pozostawia trzy własne pliki CSV z próbkami fixture'u; bez argumentu test folderu jest pomijany. Nie otwiera portu ECU.
 
+Test `BackgroundSessionTest` jest przeznaczony wyłącznie do środowiska laboratoryjnego z emulatorem ECU przez USB. Uruchom runner z `-e class com.blazej222.lpgdashboard.BackgroundSessionTest -e backgroundSessionTest true`; w otwartej aplikacji włącz CSV, wybierz port i połącz się (test czeka do 180 s na przygotowanie). Sprawdza przyrost ramek i próbek w tym samym pliku podczas ukrycia, zgaszenia ekranu, odtworzenia i zamknięcia aktywności, a następnie rozłączenie z powiadomienia. Bez argumentu test jest pomijany.
+
 Ponowne wygenerowanie LUT, sekwencji i kopii fixture'ów z oryginalnych danych:
 
 ```powershell
@@ -146,3 +150,10 @@ Generator sprawdza również długości startowych odpowiedzi względem oryginal
 - **5/5 testów instrumentacyjnych** na tymczasowym AVD API 36: dashboard i ustawienia, zapis do folderu SAF zatwierdzonego w systemowym oknie, zamknięcie pliku i wznowienie (także szybkie wyłączenie/włączenie), odtworzenie ustawień oraz obsługa brakującego uprawnienia bez zmiany fazy połączenia.
 - Wskazano `Documents/GasEcuCsvTest`. Utworzono trzy różne pliki z 2, 1 i 1 próbkami fixture'u. Po pobraniu niezależnie odczytano je Pythonowym `csv.DictReader`: 48 kolumn, prawidłowe liczby i surowy payload długości 50 bajtów. Artefakty lokalnie w `build/csv-ui-check/`.
 - Test zapisu używa zdekodowanego fixture'u i rzeczywistego dostawcy dokumentów Androida; nie otwiera portu fizycznego ECU.
+
+## Weryfikacja pracy w tle — 2026-10-22
+
+- Kompilacja APK i **26/26 testów jednostkowych**: OK. Dotychczasowe testy UI/SAF: **5/5 OK** po wydzieleniu kontrolera połączenia z ViewModelu.
+- Dodatkowy test integracyjny `BackgroundSessionTest`: **1/1 OK** na API 36 przez wirtualne USB FTDI. Odpowiedzi pochodzą z niezmienionego słownika oryginalnego `GasECU Reverse Engineering/src/emulator.py`, podawanego przez lokalny socket QEMU; nie otwierano fizycznego ECU ani portów COM.
+- Jedna sekwencja startowa (77 żądań, w tym dwie identyfikacje 01/01), potem **31 ramek 0B i 31 kolejnych wierszy CSV bez timeoutów ani błędnych ramek**. Plik CSV i log TX/RX pozostawały te same podczas ukrycia aktywności, wyłączenia ekranu, odtworzenia i pełnego zniszczenia aktywności wraz z jej ViewModelem oraz ponownego otwarcia dashboardu.
+- Akcja **Rozłącz** w powiadomieniu zamknęła sesję i CSV; powiadomienie i usługa zniknęły. `dumpsys power` potwierdził zwolnienie blokady `DiegoUsbSession`. Artefakty lokalnie w `build/background-session-check/`.

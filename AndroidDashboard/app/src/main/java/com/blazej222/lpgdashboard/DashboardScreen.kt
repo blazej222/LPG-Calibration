@@ -24,7 +24,7 @@ import java.io.File
 import java.util.Locale
 
 @Composable
-fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit, chooseRecordingDirectory: () -> Unit) {
+fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (File) -> Unit, chooseRecordingDirectory: () -> Unit, connect: () -> Unit) {
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     LaunchedEffect(Unit) { while (true) { delay(500); now = SystemClock.elapsedRealtime() } }
@@ -39,7 +39,7 @@ fun DashboardApp(state: DashboardState, model: ConnectionViewModel, shareLog: (F
                 }
                 OutlinedButton(onClick = { settingsOpen = !settingsOpen }) { Text(if (settingsOpen) "Dashboard" else "Ustawienia") }
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = { if (state.busy) model.disconnect() else model.connect() },
+                Button(onClick = { if (state.busy) model.disconnect() else connect() },
                     enabled = state.phase != ConnectionPhase.STOPPING && !state.choosingRecordingDirectory) {
                     Text(if (state.busy) "Rozłącz" else "Połącz")
                 }
@@ -217,7 +217,7 @@ private fun SettingsScreen(state: DashboardState, model: ConnectionViewModel, sh
             OutlinedButton(onClick = chooseRecordingDirectory, enabled = !state.busy && !state.choosingRecordingDirectory) {
                 Text(if (state.choosingRecordingDirectory) "Sprawdzanie folderu…" else "Wybierz folder zapisu")
             }
-            Text("Folder można zmienić po rozłączeniu. Rejestracja działa podczas odczytu, gdy aplikacja jest na ekranie. Każde rozpoczęcie zapisu tworzy nowy plik.",
+            Text("Folder można zmienić po rozłączeniu. Odczyt i rejestracja działają również w tle, po przełączeniu aplikacji lub wyłączeniu ekranu. Każde rozpoczęcie zapisu tworzy nowy plik.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             RecordingStatusText(state)
         }

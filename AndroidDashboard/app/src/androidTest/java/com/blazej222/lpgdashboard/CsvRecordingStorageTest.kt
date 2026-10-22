@@ -3,12 +3,11 @@ package com.blazej222.lpgdashboard
 import android.app.Application
 import android.net.Uri
 import android.provider.DocumentsContract
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.ViewModelStore
-import androidx.lifecycle.ViewModelStoreOwner
 import androidx.test.platform.app.InstrumentationRegistry
 import com.blazej222.lpgdashboard.protocol.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -18,13 +17,13 @@ class CsvRecordingStorageTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val application get() = instrumentation.targetContext.applicationContext as Application
     private fun main(action: () -> Unit) = instrumentation.runOnMainSync(action)
-    private fun model(store: ViewModelStore): ConnectionViewModel {
-        lateinit var result: ConnectionViewModel
-        main {
-            val owner = object : ViewModelStoreOwner { override val viewModelStore = store }
-            result = ViewModelProvider(owner, ViewModelProvider.AndroidViewModelFactory(application))[ConnectionViewModel::class.java]
-        }
+    private fun createController(): ConnectionController {
+        lateinit var result: ConnectionController
+        main { result = ConnectionController(application) }
         return result
+    }
+    private fun close(controller: ConnectionController) = runBlocking {
+        withContext(Dispatchers.Main) { controller.close() }
     }
     private fun sample(frame: Long = 1): CsvSample {
         val hex = "0B 79 69 93 9B 6B 17 65 BA A1 76 81 76 01 76 01 76 01 76 01 76 01 76 01 76 " +
@@ -58,8 +57,7 @@ class CsvRecordingStorageTest {
         val uriText = InstrumentationRegistry.getArguments().getString("csvTestDirectoryUri")
         assumeTrue("Choose a test folder in the app and pass csvTestDirectoryUri to run this storage test", uriText != null)
         val tree = Uri.parse(uriText!!)
-        val store = ViewModelStore()
-        val model = model(store)
+        val model = createController()
         try {
             main { model.selectRecordingDirectory(tree) }
             awaitCondition { !model.state.value.choosingRecordingDirectory }
@@ -90,14 +88,13 @@ class CsvRecordingStorageTest {
         } finally {
             main { model.setRecordingEnabled(false) }
             awaitCondition { !model.state.value.recordingStatus.active }
-            main { store.clear() }
+            close(model)
         }
-        val restoredStore = ViewModelStore()
-        val restored = model(restoredStore)
+        val restored = createController()
         try {
             assertEquals(uriText, restored.state.value.recording.directoryUri)
             assertFalse(restored.state.value.recording.enabled)
-        } finally { main { restoredStore.clear() } }
+        } finally { close(restored) }
     }
 
     @Test fun restoredFolderWithoutGrantStopsCsvWithoutChangingConnectionPhase() {
@@ -107,8 +104,7 @@ class CsvRecordingStorageTest {
         preferences.edit().putString("recordingDirectory",
             "content://com.android.externalstorage.documents/tree/primary%3A__missing_csv_test__")
             .putBoolean("recordingEnabled", true).commit()
-        val store = ViewModelStore()
-        val model = model(store)
+        val model = createController()
         try {
             val phase = model.state.value.phase
             runBlocking { model.recordTelemetry(sample()) }
@@ -117,7 +113,7 @@ class CsvRecordingStorageTest {
             assertNotNull(model.state.value.recordingStatus.error)
             assertEquals(phase, model.state.value.phase)
         } finally {
-            main { store.clear() }
+            close(model)
             preferences.edit().putString("recordingDirectory", previousDirectory)
                 .putBoolean("recordingEnabled", previousEnabled).commit()
         }
