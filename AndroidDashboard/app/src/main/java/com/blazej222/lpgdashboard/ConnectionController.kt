@@ -86,6 +86,7 @@ class ConnectionController internal constructor(context: Context) {
     private var csvSequence: Long = -1
     private var sessionJob: Job? = null
     private var pendingChoice: UsbChoice? = null
+    private var attachedDeviceName: String? = null
     private val permissionAction = "${context.packageName}.USB_PERMISSION"
     private var stopMessage = "Rozłączono"
     private var serviceFailure: String? = null
@@ -256,16 +257,36 @@ class ConnectionController internal constructor(context: Context) {
         }
         val previous = state.value.selectedKey
         val saved = preferences.getString("device", null)
-        val candidates = choices.filter { it.portIndex != null && it.savedKey == saved }
-        val selected = choices.find { it.key == previous }?.key ?: candidates.singleOrNull()?.key
+        attachedDeviceName = attachedDeviceName?.takeIf { name -> choices.any { it.device.deviceName == name } }
+        val eligible = choices.filter { attachedDeviceName == null || it.device.deviceName == attachedDeviceName }
+        val candidates = eligible.filter { it.portIndex != null && it.savedKey == saved }
+        val selected = eligible.find { it.key == previous }?.key ?: candidates.singleOrNull()?.key
         mutableState.update { it.copy(devices = choices, selectedKey = selected) }
     }
 
     fun selectDevice(key: String) {
         if (state.value.busy) return
         val choice = state.value.devices.find { it.key == key && it.portIndex != null } ?: return
+        attachedDeviceName = null
         preferences.edit().putString("device", choice.savedKey).apply()
         mutableState.update { it.copy(selectedKey = key, message = "Wybrano ${choice.title}") }
+    }
+
+    fun selectAttachedDevice(device: UsbDevice) {
+        // Resolve against the current USB list; an exported activity intent is not a permission grant.
+        // Do not change the selected port of a session that is already running in the service.
+        if (state.value.busy) return
+        attachedDeviceName = device.deviceName
+        refreshDevices()
+        val ports = state.value.devices.filter {
+            it.device.deviceName == device.deviceName && it.device.deviceId == device.deviceId && it.portIndex != null
+        }
+        val saved = preferences.getString("device", null)
+        val choice = ports.find { it.savedKey == saved } ?: ports.singleOrNull()
+        if (choice != null) selectDevice(choice.key)
+        else mutableState.update { it.copy(selectedKey = null, message = if (ports.isEmpty())
+            "Podłączone urządzenie nie udostępnia obsługiwanego portu USB. Sprawdź ustawienia."
+            else "Urządzenie ma kilka portów. Wybierz właściwy w ustawieniach.") }
     }
 
     fun connect() {

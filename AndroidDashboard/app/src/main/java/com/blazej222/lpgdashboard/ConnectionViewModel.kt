@@ -1,6 +1,7 @@
 package com.blazej222.lpgdashboard
 
 import android.app.Application
+import android.hardware.usb.UsbDevice
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 
@@ -13,6 +14,7 @@ class ConnectionViewModel(application: Application) : AndroidViewModel(applicati
     fun disconnect(message: String = "Rozłączono") = controller.disconnect(message)
     fun refreshDevices() = controller.refreshDevices()
     fun selectDevice(key: String) = controller.selectDevice(key)
+    fun selectAttachedDevice(device: UsbDevice) = controller.selectAttachedDevice(device)
     fun updateSettings(settings: DashboardSettings) = controller.updateSettings(settings)
     fun setAverageInjectionTimes(enabled: Boolean) = controller.setAverageInjectionTimes(enabled)
     fun setInjectorCount(count: Int) = controller.setInjectorCount(count)

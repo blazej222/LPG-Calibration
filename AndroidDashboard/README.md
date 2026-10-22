@@ -6,7 +6,9 @@ Aplikacja w `app/` obsługuje kabel USB–UART w trybie USB host, inicjalizację
 
 1. Zbuduj i zainstaluj `app/build/outputs/apk/debug/app-debug.apk` (Android Studio lub polecenia poniżej).
 2. Podłącz kabel LPG do portu USB host radia.
+   Przy systemowym pytaniu o aplikację do obsługi kabla można wybrać **GAS ECU** i, jeśli radio udostępnia taką opcję, zapamiętać ten wybór. Po zainstalowaniu aktualizacji odłącz i podłącz kabel ponownie. Filtr obejmuje standardowe FTDI, CP210x, PL2303, CH340/CH341, CH9102F i interfejsy CDC ACM; identyfikatory są w `app/src/main/res/xml/usb_device_filter.xml`. Deklaracja wykrywania jest zgodna z [Android USB host](https://developer.android.com/develop/connectivity/usb/host).
 3. Otwórz **Ustawienia → Urządzenie USB**, wybierz urządzenie i port. Lista zawiera nazwę sterownika, VID/PID i ścieżkę USB. Nieobsługiwane urządzenia są widoczne, ale nie można ich wybrać.
+   Uruchomienie z systemowego okna USB zaznacza port wskazanego kabla: zapamiętany dla niego port albo jedyny dostępny. Przy kilku portach bez zapamiętanego wyboru trzeba wskazać port ręcznie. Już działająca sesja nie jest przełączana na nowo wykryty kabel.
 4. Wybierz **Połącz** i zaakceptuj systemowe okno dostępu do USB. Inicjalizacja trwa kilka sekund; jej postęp jest widoczny.
 5. Wróć na **Dashboard**. Domyślny minimalny odstęp między odczytami to 200 ms. Ustawienia profilu czujników można zmieniać po rozłączeniu.
 
@@ -157,3 +159,10 @@ Generator sprawdza również długości startowych odpowiedzi względem oryginal
 - Dodatkowy test integracyjny `BackgroundSessionTest`: **1/1 OK** na API 36 przez wirtualne USB FTDI. Odpowiedzi pochodzą z niezmienionego słownika oryginalnego `GasECU Reverse Engineering/src/emulator.py`, podawanego przez lokalny socket QEMU; nie otwierano fizycznego ECU ani portów COM.
 - Jedna sekwencja startowa (77 żądań, w tym dwie identyfikacje 01/01), potem **31 ramek 0B i 31 kolejnych wierszy CSV bez timeoutów ani błędnych ramek**. Plik CSV i log TX/RX pozostawały te same podczas ukrycia aktywności, wyłączenia ekranu, odtworzenia i pełnego zniszczenia aktywności wraz z jej ViewModelem oraz ponownego otwarcia dashboardu.
 - Akcja **Rozłącz** w powiadomieniu zamknęła sesję i CSV; powiadomienie i usługa zniknęły. `dumpsys power` potwierdził zwolnienie blokady `DiegoUsbSession`. Artefakty lokalnie w `build/background-session-check/`.
+
+## Weryfikacja systemowego otwierania USB — 2026-10-22
+
+- Kompilacja APK, **26 testów jednostkowych** i **3 testy interfejsu**: OK.
+- Po podłączeniu wirtualnego FTDI `0403:6001` Android API 36 wyświetlił systemowe pytanie **Open GAS ECU to handle QEMU USB SERIAL?**, z opcją zapamiętania wyboru. Po zatwierdzeniu aplikacja uruchomiła się i zaznaczyła port wskazanego kabla.
+- Przy drugim, identycznym FTDI podłączonym równocześnie potwierdzono obsługę nowego intentu przez tę samą aktywność: zaznaczenie zmieniło się z `/dev/bus/usb/001/002` na `/dev/bus/usb/001/003`. Samo uruchomienie z okna USB nie wysłało żadnych bajtów szeregowych; połączenie z ECU wymaga **Połącz**.
+- Artefakty w `build/usb-attach-check/`. Test dotyczy wirtualnego FTDI; nie otwierano fizycznego ECU ani portów COM.

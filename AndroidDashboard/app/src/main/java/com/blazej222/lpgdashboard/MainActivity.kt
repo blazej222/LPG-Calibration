@@ -3,6 +3,8 @@
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -15,7 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.core.content.FileProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import com.blazej222.lpgdashboard.ui.theme.LPGDashboardTheme
 import java.io.File
 
@@ -31,9 +33,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val model = ViewModelProvider(this)[ConnectionViewModel::class.java]
+        connection = model
+        handleUsbAttachment(intent)
         setContent {
-            val model: ConnectionViewModel = viewModel()
-            connection = model
             val state by model.state.collectAsStateWithLifecycle()
             DisposableEffect(state.busy) {
                 if (state.busy) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -45,6 +48,20 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleUsbAttachment(intent)
+    }
+
+    private fun handleUsbAttachment(intent: Intent?) {
+        if (intent?.action != UsbManager.ACTION_USB_DEVICE_ATTACHED) return
+        @Suppress("DEPRECATION")
+        val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE) ?: return
+        connection?.selectAttachedDevice(device)
+    }
+
     private fun chooseRecordingDirectory() {
         val model = connection ?: return
         if (model.state.value.busy || model.state.value.choosingRecordingDirectory) return
